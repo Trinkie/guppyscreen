@@ -1,5 +1,6 @@
 #include "macro_item.h"
 #include "spdlog/spdlog.h"
+#include "ui_style.h"
 
 MacroItem::MacroItem(KWebSocketClient &c,
 		     lv_obj_t *parent,
@@ -34,9 +35,11 @@ MacroItem::MacroItem(KWebSocketClient &c,
   lv_obj_set_flex_flow(cont, LV_FLEX_FLOW_ROW_WRAP);
   lv_obj_set_flex_align(cont, LV_FLEX_ALIGN_SPACE_EVENLY, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
 
-  lv_obj_set_style_border_side(cont, LV_BORDER_SIDE_TOP, LV_PART_MAIN);  
-
-  lv_obj_set_style_border_width(cont, 2, 0);
+  // one glass card per macro
+  ui::card(cont);
+  lv_obj_set_style_radius(cont, 16, 0);
+  lv_obj_set_style_pad_all(cont, 8, 0);
+  lv_obj_set_style_pad_row(cont, 8, 0);
   lv_obj_clear_flag(hide_show_cont, LV_OBJ_FLAG_SCROLLABLE);
   
   lv_obj_center(hide_show);
@@ -55,15 +58,17 @@ MacroItem::MacroItem(KWebSocketClient &c,
   lv_obj_add_event_cb(hide_show_cont, &MacroItem::_handle_hide_show, LV_EVENT_CLICKED, this);
 
   lv_label_set_text(macro_label, macro_name.c_str());
+  lv_obj_set_style_text_font(macro_label, &manrope_16, 0);
   lv_obj_align(macro_label, LV_ALIGN_LEFT_MID, 65, 0);
 
   lv_obj_t *run_btn = lv_btn_create(top_cont);
+  ui::accent_fill(run_btn);
   lv_obj_align(run_btn, LV_ALIGN_RIGHT_MID, 0, 0);
 
-  lv_obj_set_style_text_font(run_btn, &lv_font_montserrat_16, LV_STATE_DEFAULT);
-  lv_obj_set_width(run_btn, 80);
+  lv_obj_set_style_text_font(run_btn, &mdi_20, LV_STATE_DEFAULT);
+  lv_obj_set_size(run_btn, 72, 44);
   lv_obj_t *run_btn_label = lv_label_create(run_btn);
-  lv_label_set_text(run_btn_label, LV_SYMBOL_PLAY);
+  lv_label_set_text(run_btn_label, ICON_PLAY);
   lv_obj_center(run_btn_label);
   lv_obj_add_event_cb(run_btn , &MacroItem::_handle_send_macro, LV_EVENT_CLICKED, this);
 
@@ -85,6 +90,8 @@ MacroItem::MacroItem(KWebSocketClient &c,
     for (auto const & [k, v] : m_params) {
       param_name = lv_label_create(params_cont);
       lv_label_set_text(param_name, k.c_str());
+      lv_obj_set_style_text_font(param_name, &manrope_16, 0);
+      lv_obj_set_style_text_color(param_name, ui::text2(), 0);
 
       param_value = lv_textarea_create(params_cont);
       lv_textarea_set_one_line(param_value, true);

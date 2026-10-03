@@ -152,6 +152,13 @@ void ButtonContainer::make_pill(const char *icon, PillVariant variant, bool icon
   }
 }
 
+void ButtonContainer::make_tile() {
+  lv_obj_set_flex_flow(btn_cont, LV_FLEX_FLOW_COLUMN);
+  lv_obj_set_flex_align(btn_cont, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+  lv_obj_set_style_pad_row(btn_cont, 6, 0);
+  lv_obj_set_style_text_font(label, &manrope_16, 0);
+}
+
 void ButtonContainer::set_icon(const char *icon) {
   if (pill_icon != NULL) {
     lv_label_set_text(pill_icon, icon);

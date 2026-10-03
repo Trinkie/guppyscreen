@@ -1,6 +1,7 @@
 #include "console_panel.h"
 #include "state.h"
 #include "spdlog/spdlog.h"
+#include "ui_style.h"
 
 #include <algorithm>
 #include <cctype>
@@ -22,13 +23,19 @@ ConsolePanel::ConsolePanel(KWebSocketClient &websocket_client, std::mutex &lock,
   lv_obj_set_size(console_cont, LV_PCT(100), LV_PCT(100));
   lv_obj_set_flex_flow(console_cont, LV_FLEX_FLOW_COLUMN);
   lv_obj_set_style_pad_all(console_cont, 0, 0);
+  lv_obj_set_style_pad_row(console_cont, ui::GAP, 0);
   lv_obj_set_style_text_font(console_cont, &dejavusans_mono_14, LV_STATE_DEFAULT);
 
   lv_obj_set_flex_grow(top_cont, 1);
   lv_obj_set_style_pad_all(top_cont, 0, 0);
   lv_obj_set_width(top_cont, LV_PCT(100));
+  lv_obj_clear_flag(top_cont, LV_OBJ_FLAG_SCROLLABLE);
 
-  lv_obj_set_style_border_width(output, 0, 0);
+  // output log and macro list as two glass cards
+  ui::card(output);
+  lv_obj_set_style_border_width(output, 1, 0);
+  lv_obj_set_style_pad_all(output, 12, 0);
+  lv_obj_set_style_text_color(output, ui::text2(), 0);
   lv_obj_set_size(output, LV_PCT(60), LV_PCT(100));
   lv_obj_set_style_border_width(output, 0, LV_STATE_FOCUSED | LV_PART_CURSOR);
 
@@ -39,29 +46,47 @@ ConsolePanel::ConsolePanel(KWebSocketClient &websocket_client, std::mutex &lock,
 
   lv_obj_set_flex_flow(input_cont, LV_FLEX_FLOW_ROW);
   lv_obj_set_style_pad_all(input_cont, 0, 0);
+  lv_obj_set_style_pad_column(input_cont, 10, 0);
+  lv_obj_set_style_radius(input, LV_RADIUS_CIRCLE, 0);
+  lv_obj_set_style_pad_hor(input, 18, 0);
+  lv_obj_set_style_pad_ver(input, 12, 0);
   lv_obj_set_size(input_cont, LV_PCT(100), LV_SIZE_CONTENT);
 
   lv_obj_t *send_btn = lv_btn_create(input_cont);
-  lv_obj_set_style_text_font(send_btn, &lv_font_montserrat_16, LV_STATE_DEFAULT);
-  lv_obj_set_width(send_btn, 100);
+  ui::accent_fill(send_btn);
+  lv_obj_set_style_text_font(send_btn, &mdi_20, LV_STATE_DEFAULT);
+  lv_obj_set_size(send_btn, 88, 48);
   lv_obj_t *send_btn_label = lv_label_create(send_btn);
-  lv_label_set_text(send_btn_label, LV_SYMBOL_NEW_LINE);
+  lv_label_set_text(send_btn_label, ICON_SEND);
   lv_obj_center(send_btn_label);
   lv_obj_add_event_cb(send_btn , &ConsolePanel::_handle_send_macro, LV_EVENT_CLICKED, this);
 
   lv_obj_add_flag(kb, LV_OBJ_FLAG_HIDDEN);
-  lv_obj_set_style_text_font(kb, &lv_font_montserrat_16, LV_STATE_DEFAULT);
+  ui::card_solid(kb);
+  lv_obj_set_style_text_font(kb, &manrope_16, LV_PART_ITEMS);
   lv_obj_add_event_cb(input, &ConsolePanel::_handle_kb_input, LV_EVENT_ALL, this);
 
-  lv_obj_set_size(macro_list, LV_PCT(40), LV_PCT(100));
+  lv_obj_set_size(macro_list, LV_PCT(38), LV_PCT(100));
   lv_obj_align(macro_list, LV_ALIGN_TOP_RIGHT, 0, 0);
+  ui::card(macro_list);
+  lv_obj_set_style_border_width(macro_list, 1, 0);
+  lv_obj_set_style_pad_all(macro_list, 4, 0);
+  lv_obj_set_style_clip_corner(macro_list, true, 0);
+  lv_obj_set_style_bg_opa(macro_list, LV_OPA_TRANSP, LV_PART_ITEMS);
+  lv_obj_set_style_border_width(macro_list, 1, LV_PART_ITEMS);
+  lv_obj_set_style_border_side(macro_list, LV_BORDER_SIDE_BOTTOM, LV_PART_ITEMS);
+  lv_obj_set_style_border_color(macro_list, lv_color_white(), LV_PART_ITEMS);
+  lv_obj_set_style_border_opa(macro_list, 18, LV_PART_ITEMS);
+  lv_obj_set_style_text_font(macro_list, &manrope_16, LV_PART_ITEMS);
+  lv_obj_set_style_bg_color(macro_list, lv_color_white(), LV_PART_ITEMS | LV_STATE_PRESSED);
+  lv_obj_set_style_bg_opa(macro_list, 30, LV_PART_ITEMS | LV_STATE_PRESSED);
   lv_table_set_col_width(macro_list, 0, LV_PCT(100));
 
   lv_obj_add_event_cb(macro_list, &ConsolePanel::_handle_select_macro, LV_EVENT_ALL, this);
   lv_obj_set_scroll_dir(macro_list, LV_DIR_TOP | LV_DIR_BOTTOM);
 
   lv_obj_t *label = lv_label_create(input);
-  lv_obj_set_style_text_font(label, &lv_font_montserrat_16, LV_STATE_DEFAULT);
+  lv_obj_set_style_text_font(label, &manrope_16, LV_STATE_DEFAULT);
   lv_label_set_text(label, "      " LV_SYMBOL_CLOSE "      ");
   lv_obj_align(label, LV_ALIGN_RIGHT_MID, 0, 0);
   lv_obj_add_flag(label, LV_OBJ_FLAG_CLICKABLE);

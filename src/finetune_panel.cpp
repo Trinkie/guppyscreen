@@ -1,6 +1,7 @@
 #include "finetune_panel.h"
 #include "state.h"
 #include "spdlog/spdlog.h"
+#include "ui_style.h"
 #include "config.h"
 
 #include <algorithm>
@@ -45,48 +46,69 @@ FineTunePanel::FineTunePanel(KWebSocketClient &websocket_client, std::mutex &l)
   , flow_factor(values_cont, &flow_up_img, 150, 100, 15, "100%")
 {
   lv_obj_move_background(panel_cont);
-  
   lv_obj_set_size(panel_cont, LV_PCT(100), LV_PCT(100));
   lv_obj_clear_flag(panel_cont, LV_OBJ_FLAG_SCROLLABLE);
 
-  lv_obj_set_size(values_cont, LV_PCT(20), LV_PCT(80));
-  lv_obj_clear_flag(values_cont, LV_OBJ_FLAG_SCROLLABLE);
-  lv_obj_set_style_pad_all(values_cont, 0, 0);
-  lv_obj_set_flex_flow(values_cont, LV_FLEX_FLOW_COLUMN);
-  lv_obj_set_flex_align(values_cont, LV_FLEX_ALIGN_SPACE_EVENLY, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+  back_btn.make_pill(ICON_BACK, ButtonContainer::PILL_GLASS, true);
+  ui::panel_header(panel_cont, back_btn.get_container(), "Fine Tune");
 
-  static lv_coord_t grid_main_row_dsc[] = {LV_GRID_FR(1), LV_GRID_FR(1), LV_GRID_FR(1), LV_GRID_FR(1),
-    LV_GRID_TEMPLATE_LAST};
+  // four columns: Z offset, pressure advance, speed, flow; step selectors below
+  static lv_coord_t grid_main_row_dsc[] = {LV_GRID_FR(1), LV_GRID_CONTENT, LV_GRID_TEMPLATE_LAST};
   static lv_coord_t grid_main_col_dsc[] = {LV_GRID_FR(1), LV_GRID_FR(1), LV_GRID_FR(1), LV_GRID_FR(1),
-    LV_GRID_FR(1), LV_GRID_TEMPLATE_LAST};
-
+    LV_GRID_TEMPLATE_LAST};
   lv_obj_set_grid_dsc_array(panel_cont, grid_main_col_dsc, grid_main_row_dsc);
+  lv_obj_set_style_pad_row(panel_cont, ui::GAP, 0);
+  lv_obj_set_style_pad_column(panel_cont, ui::GAP, 0);
+  lv_obj_add_flag(values_cont, LV_OBJ_FLAG_HIDDEN);
 
-  // col 1
-  lv_obj_set_grid_cell(zreset_btn.get_container(), LV_GRID_ALIGN_CENTER, 0, 1, LV_GRID_ALIGN_CENTER, 0, 1);
-  lv_obj_set_grid_cell(zup_btn.get_container(), LV_GRID_ALIGN_CENTER, 0, 1, LV_GRID_ALIGN_CENTER, 1, 1);
-  lv_obj_set_grid_cell(zdown_btn.get_container(), LV_GRID_ALIGN_CENTER, 0, 1, LV_GRID_ALIGN_CENTER, 2, 1);
-  lv_obj_set_grid_cell(zoffset_selector.get_container(), LV_GRID_ALIGN_CENTER, 0, 2, LV_GRID_ALIGN_CENTER, 3, 1);
+  struct Column {
+    const char *title;
+    ImageLabel *value;
+    ButtonContainer *up;
+    ButtonContainer *down;
+    ButtonContainer *reset;
+  } columns[] = {
+    {"Z offset", &z_offset, &zup_btn, &zdown_btn, &zreset_btn},
+    {"Pressure advance", &pa, &paup_btn, &padown_btn, &pareset_btn},
+    {"Speed", &speed_factor, &speed_up_btn, &speed_down_btn, &speed_reset_btn},
+    {"Flow", &flow_factor, &flow_up_btn, &flow_down_btn, &flow_reset_btn},
+  };
 
-  // col 2
-  lv_obj_set_grid_cell(pareset_btn.get_container(), LV_GRID_ALIGN_CENTER, 1, 1, LV_GRID_ALIGN_CENTER, 0, 1);
-  lv_obj_set_grid_cell(paup_btn.get_container(), LV_GRID_ALIGN_CENTER, 1, 1, LV_GRID_ALIGN_CENTER, 1, 1);
-  lv_obj_set_grid_cell(padown_btn.get_container(), LV_GRID_ALIGN_CENTER, 1, 1, LV_GRID_ALIGN_CENTER, 2, 1);
-  
-  // col 3
-  lv_obj_set_grid_cell(speed_reset_btn.get_container(), LV_GRID_ALIGN_CENTER, 2, 1, LV_GRID_ALIGN_CENTER, 0, 1);
-  lv_obj_set_grid_cell(speed_up_btn.get_container(), LV_GRID_ALIGN_CENTER, 2, 1, LV_GRID_ALIGN_CENTER, 1, 1);
-  lv_obj_set_grid_cell(speed_down_btn.get_container(), LV_GRID_ALIGN_CENTER, 2, 1, LV_GRID_ALIGN_CENTER, 2, 1);
-  lv_obj_set_grid_cell(multipler_selector.get_container(), LV_GRID_ALIGN_CENTER, 2, 2, LV_GRID_ALIGN_CENTER, 3, 1);  
+  for (int i = 0; i < 4; i++) {
+    Column &c = columns[i];
+    lv_obj_t *card = lv_obj_create(panel_cont);
+    ui::card(card);
+    lv_obj_clear_flag(card, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_set_style_pad_all(card, 10, 0);
+    lv_obj_set_flex_flow(card, LV_FLEX_FLOW_COLUMN);
+    lv_obj_set_flex_align(card, LV_FLEX_ALIGN_SPACE_EVENLY, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+    lv_obj_set_grid_cell(card, LV_GRID_ALIGN_STRETCH, i, 1, LV_GRID_ALIGN_STRETCH, 0, 1);
 
-  // col 4
-  lv_obj_set_grid_cell(flow_reset_btn.get_container(), LV_GRID_ALIGN_CENTER, 3, 1, LV_GRID_ALIGN_CENTER, 0, 1);
-  lv_obj_set_grid_cell(flow_up_btn.get_container(), LV_GRID_ALIGN_CENTER, 3, 1, LV_GRID_ALIGN_CENTER, 1, 1);
-  lv_obj_set_grid_cell(flow_down_btn.get_container(), LV_GRID_ALIGN_CENTER, 3, 1, LV_GRID_ALIGN_CENTER, 2, 1);
+    ui::text_label(card, c.title, &manrope_16, ui::text2());
 
-  // col 5
-  lv_obj_set_grid_cell(values_cont, LV_GRID_ALIGN_CENTER, 4, 1, LV_GRID_ALIGN_CENTER, 0, 3);  
-  lv_obj_set_grid_cell(back_btn.get_container(), LV_GRID_ALIGN_CENTER, 4, 1, LV_GRID_ALIGN_CENTER, 3, 1);
+    lv_obj_t *v = c.value->get_container();
+    lv_obj_set_parent(v, card);
+    ui::clear(v);
+    lv_obj_set_style_border_width(v, 0, 0);
+    lv_obj_set_size(v, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
+    lv_obj_add_flag(c.value->get_image(), LV_OBJ_FLAG_HIDDEN);
+    lv_obj_set_style_text_font(c.value->get_label(), &manrope_20, 0);
+    lv_obj_align(c.value->get_label(), LV_ALIGN_CENTER, 0, 0);
+
+    for (auto *b : {c.up, c.down}) {
+      lv_obj_set_parent(b->get_container(), card);
+      b->make_pill(b == c.up ? ICON_PLUS : ICON_MINUS, ButtonContainer::PILL_GLASS, true);
+      lv_obj_set_size(b->get_container(), 64, 64);
+    }
+    lv_obj_set_parent(c.reset->get_container(), card);
+    c.reset->make_pill(ICON_REFRESH, ButtonContainer::PILL_GLASS, true);
+    lv_obj_set_size(c.reset->get_container(), 48, 40);
+  }
+
+  lv_obj_set_grid_cell(zoffset_selector.get_container(), LV_GRID_ALIGN_STRETCH, 0, 2, LV_GRID_ALIGN_CENTER, 1, 1);
+  lv_obj_set_grid_cell(multipler_selector.get_container(), LV_GRID_ALIGN_STRETCH, 2, 2, LV_GRID_ALIGN_CENTER, 1, 1);
+  lv_label_set_text(zoffset_selector.get_label(), "Z / PA step");
+  lv_label_set_text(multipler_selector.get_label(), "Speed / flow step (%)");
 
   ws.register_notify_update(this);
 }

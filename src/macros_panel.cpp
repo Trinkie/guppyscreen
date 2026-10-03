@@ -2,6 +2,7 @@
 #include "state.h"
 #include "utils.h"
 #include "spdlog/spdlog.h"
+#include "ui_style.h"
 
 MacrosPanel::MacrosPanel(KWebSocketClient &c, std::mutex &l, lv_obj_t *parent)
   : ws(c)
@@ -16,24 +17,31 @@ MacrosPanel::MacrosPanel(KWebSocketClient &c, std::mutex &l, lv_obj_t *parent)
   lv_obj_set_style_pad_all(cont, 0, 0);
   
   lv_obj_set_flex_flow(cont, LV_FLEX_FLOW_COLUMN);
-  lv_obj_set_style_pad_row(cont, 0, 0);
+  lv_obj_set_style_pad_row(cont, ui::GAP, 0);
 
-  lv_obj_set_size(top_controls, LV_PCT(100), LV_SIZE_CONTENT);
+  // header: title on the left, "show hidden" switch on the right
+  lv_obj_set_size(top_controls, LV_PCT(100), 44);
+  lv_obj_set_style_pad_all(top_controls, 0, 0);
+  lv_obj_set_style_pad_left(top_controls, 4, 0);
+  lv_obj_clear_flag(top_controls, LV_OBJ_FLAG_SCROLLABLE);
+  lv_obj_t *title = ui::text_label(top_controls, "Macros", &manrope_28, ui::text());
+  lv_obj_align(title, LV_ALIGN_LEFT_MID, 0, 0);
 
+  lv_obj_set_size(show_hide_switch, 56, 30);
   lv_obj_align(show_hide_switch, LV_ALIGN_RIGHT_MID, 0, 0);
-  lv_obj_t *label = lv_label_create(top_controls);
-  lv_label_set_text(label, "Show Hidden");
-  lv_obj_align_to(label, show_hide_switch, LV_ALIGN_OUT_LEFT_MID, 0, 0);
+  lv_obj_t *label = ui::text_label(top_controls, "Show hidden", &manrope_16, ui::text2());
+  lv_obj_align_to(label, show_hide_switch, LV_ALIGN_OUT_LEFT_MID, -10, 0);
   lv_obj_add_event_cb(show_hide_switch, &MacrosPanel::_handle_hide_show, LV_EVENT_VALUE_CHANGED, this);
   
   lv_obj_set_flex_grow(top_cont, 1);
   lv_obj_set_style_pad_all(top_cont, 0, 0);
   lv_obj_set_width(top_cont, LV_PCT(100));
   lv_obj_set_flex_flow(top_cont, LV_FLEX_FLOW_COLUMN);
-  lv_obj_set_style_pad_row(top_cont, 0, 0);
+  lv_obj_set_style_pad_row(top_cont, 8, 0);
   
   lv_obj_add_flag(kb, LV_OBJ_FLAG_HIDDEN);
-  lv_obj_set_style_text_font(kb, &lv_font_montserrat_16, LV_STATE_DEFAULT);
+  ui::card_solid(kb);
+  lv_obj_set_style_text_font(kb, &manrope_16, LV_PART_ITEMS);
 }
 
 MacrosPanel::~MacrosPanel()

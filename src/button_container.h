@@ -30,6 +30,8 @@ class ButtonContainer {
   // an empty text makes a round icon-only button
   // icon may be NULL (text only); icon_only hides the text and makes a round button
   void make_pill(const char *icon, PillVariant variant, bool icon_only = false);
+  // fills its grid cell as a glass tile with the image and label centered
+  void make_tile();
   // changes the icon glyph of a pill button
   void set_icon(const char *icon);
 

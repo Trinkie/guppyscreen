@@ -74,6 +74,13 @@ SettingPanel::SettingPanel(KWebSocketClient &c, std::mutex &l, lv_obj_t *parent,
   lv_obj_set_grid_cell(guppy_update_btn.get_container(), LV_GRID_ALIGN_CENTER, 2, 1, LV_GRID_ALIGN_START, 2, 1);
   lv_obj_set_grid_cell(printer_select_btn.get_container(), LV_GRID_ALIGN_CENTER, 3, 1, LV_GRID_ALIGN_START, 2, 1);
 
+  ButtonContainer *tiles[] = {&wifi_btn, &restart_klipper_btn, &restart_firmware_btn, &sysinfo_btn,
+                              &spoolman_btn, &guppy_restart_btn, &guppy_update_btn, &printer_select_btn};
+  for (int i = 0; i < 8; i++) {
+    tiles[i]->make_tile();
+    lv_obj_set_grid_cell(tiles[i]->get_container(), LV_GRID_ALIGN_STRETCH, i % 4, 1, LV_GRID_ALIGN_STRETCH, 1 + i / 4, 1);
+  }
+
   create_appearance();
 }
 

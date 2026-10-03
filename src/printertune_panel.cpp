@@ -1,6 +1,7 @@
 #include "printertune_panel.h"
 #include "state.h"
 #include "spdlog/spdlog.h"
+#include "ui_style.h"
 
 #include <experimental/filesystem>
 
@@ -54,7 +55,13 @@ PrinterTunePanel::PrinterTunePanel(KWebSocketClient &c, std::mutex &l, lv_obj_t 
 
   tmc_tune_btn.disable();
 
-  static lv_coord_t grid_main_row_dsc[] = {LV_GRID_FR(2), LV_GRID_FR(5), LV_GRID_FR(5), LV_GRID_TEMPLATE_LAST};
+  static lv_coord_t grid_main_row_dsc[] = {44, LV_GRID_FR(1), LV_GRID_FR(1), LV_GRID_TEMPLATE_LAST};
+  lv_obj_set_style_pad_all(cont, 0, 0);
+  lv_obj_set_style_pad_row(cont, ui::GAP, 0);
+  lv_obj_set_style_pad_column(cont, ui::GAP, 0);
+  lv_obj_t *title = ui::text_label(cont, "Tune", &manrope_28, ui::text());
+  lv_obj_set_grid_cell(title, LV_GRID_ALIGN_START, 0, 4, LV_GRID_ALIGN_CENTER, 0, 1);
+  lv_obj_set_style_pad_left(title, 4, 0);
   static lv_coord_t grid_main_col_dsc[] = {LV_GRID_FR(1), LV_GRID_FR(1), LV_GRID_FR(1), LV_GRID_FR(1),
       LV_GRID_TEMPLATE_LAST};
 
@@ -72,6 +79,13 @@ PrinterTunePanel::PrinterTunePanel(KWebSocketClient &c, std::mutex &l, lv_obj_t 
   lv_obj_set_grid_cell(tmc_status_btn.get_container(), LV_GRID_ALIGN_CENTER, 2, 1, LV_GRID_ALIGN_START, 2, 1);
   lv_obj_set_grid_cell(power_devices_btn.get_container(), LV_GRID_ALIGN_CENTER, 3, 1, LV_GRID_ALIGN_START, 2, 1);
   // lv_obj_set_grid_cell(restart_firmware_btn.get_container(), LV_GRID_ALIGN_CENTER, 3, 1, LV_GRID_ALIGN_START, 2, 1);
+
+  ButtonContainer *tiles[] = {&bedmesh_btn, &finetune_btn, &inputshaper_btn, &belts_calibration_btn,
+                              &limits_btn, &tmc_tune_btn, &tmc_status_btn, &power_devices_btn};
+  for (int i = 0; i < 8; i++) {
+    tiles[i]->make_tile();
+    lv_obj_set_grid_cell(tiles[i]->get_container(), LV_GRID_ALIGN_STRETCH, i % 4, 1, LV_GRID_ALIGN_STRETCH, 1 + i / 4, 1);
+  }
 }
 
 PrinterTunePanel::~PrinterTunePanel() {
