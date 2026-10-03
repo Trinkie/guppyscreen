@@ -51,6 +51,10 @@ static lv_style_t st_arc_ind;
 static lv_style_t st_chart;
 static lv_style_t st_field;
 static lv_style_t st_imgbtn_pressed;
+static lv_style_t st_table;
+static lv_style_t st_table_cell;
+static lv_style_t st_cell_pressed;
+static lv_style_t st_keyboard;
 static lv_style_t st_imgbtn_disabled;
 
 lv_color_t base()    { return lv_color_hex(0x0A0C0E); }
@@ -382,6 +386,34 @@ static void init_styles() {
   lv_style_set_border_opa(&st_field, 120);
   lv_style_set_text_color(&st_field, text());
 
+  lv_style_init(&st_table);
+  lv_style_set_bg_opa(&st_table, LV_OPA_TRANSP);
+  lv_style_set_border_width(&st_table, 0);
+  lv_style_set_pad_all(&st_table, 0);
+
+  lv_style_init(&st_table_cell);
+  lv_style_set_bg_opa(&st_table_cell, LV_OPA_TRANSP);
+  lv_style_set_border_width(&st_table_cell, 1);
+  lv_style_set_border_side(&st_table_cell, LV_BORDER_SIDE_BOTTOM);
+  lv_style_set_border_color(&st_table_cell, white);
+  lv_style_set_border_opa(&st_table_cell, 18);
+  lv_style_set_pad_ver(&st_table_cell, 12);
+  lv_style_set_pad_hor(&st_table_cell, 14);
+  lv_style_set_text_font(&st_table_cell, &manrope_16);
+  lv_style_set_text_color(&st_table_cell, text());
+
+  lv_style_init(&st_cell_pressed);
+  lv_style_set_bg_color(&st_cell_pressed, white);
+  lv_style_set_bg_opa(&st_cell_pressed, 30);
+
+  lv_style_init(&st_keyboard);
+  lv_style_set_bg_color(&st_keyboard, lv_color_hex(0x14171B));
+  lv_style_set_bg_opa(&st_keyboard, 250);
+  lv_style_set_radius(&st_keyboard, 22);
+  lv_style_set_pad_all(&st_keyboard, 8);
+  lv_style_set_pad_gap(&st_keyboard, 6);
+  lv_style_set_text_font(&st_keyboard, &manrope_16);
+
   lv_style_init(&st_imgbtn_pressed);
   lv_style_set_img_recolor_opa(&st_imgbtn_pressed, LV_OPA_COVER);
 
@@ -486,7 +518,23 @@ void theme_apply_cb(lv_theme_t *th, lv_obj_t *obj) {
     return;
   }
 
-  if (lv_obj_check_type(obj, &lv_btnmatrix_class) || lv_obj_check_type(obj, &lv_keyboard_class)) {
+  if (lv_obj_check_type(obj, &lv_table_class)) {
+    lv_obj_add_style(obj, &st_table, LV_PART_MAIN);
+    lv_obj_add_style(obj, &st_scrollbar, LV_PART_SCROLLBAR);
+    lv_obj_add_style(obj, &st_table_cell, LV_PART_ITEMS);
+    lv_obj_add_style(obj, &st_cell_pressed, LV_PART_ITEMS | LV_STATE_PRESSED);
+    return;
+  }
+
+  if (lv_obj_check_type(obj, &lv_keyboard_class)) {
+    lv_obj_add_style(obj, &st_keyboard, LV_PART_MAIN);
+    lv_obj_add_style(obj, &st_btnm_item, LV_PART_ITEMS);
+    lv_obj_add_style(obj, &st_pressed, LV_PART_ITEMS | LV_STATE_PRESSED);
+    lv_obj_add_style(obj, &st_checked, LV_PART_ITEMS | LV_STATE_CHECKED);
+    return;
+  }
+
+  if (lv_obj_check_type(obj, &lv_btnmatrix_class)) {
     lv_obj_add_style(obj, &st_btnm_main, LV_PART_MAIN);
     lv_obj_add_style(obj, &st_btnm_item, LV_PART_ITEMS);
     lv_obj_add_style(obj, &st_pressed, LV_PART_ITEMS | LV_STATE_PRESSED);

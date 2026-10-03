@@ -2,6 +2,7 @@
 #include "utils.h"
 #include "config.h"
 #include "spdlog/spdlog.h"
+#include "ui_style.h"
 
 #include <sstream>
 #include <iostream>
@@ -97,6 +98,37 @@ WifiPanel::WifiPanel(std::mutex &l)
   lv_obj_add_event_cb(wifi_label, &WifiPanel::_handle_kb_input, LV_EVENT_CLICKED, this);
   lv_obj_move_background(cont);
   lv_obj_move_foreground(spinner);
+
+  // glass layout: header, networks card, password card
+  back_btn.make_pill(ICON_BACK, ButtonContainer::PILL_GLASS, true);
+  ui::panel_header(cont, back_btn.get_container(), "Wi-Fi");
+  lv_obj_set_style_pad_column(top_cont, ui::GAP, 0);
+  lv_obj_set_style_pad_all(top_cont, 0, 0);
+
+  ui::card(wifi_table);
+  lv_obj_set_height(wifi_table, LV_PCT(100));
+  lv_obj_set_style_pad_all(wifi_table, 4, 0);
+  lv_obj_set_style_clip_corner(wifi_table, true, 0);
+  lv_obj_set_style_bg_opa(wifi_table, LV_OPA_TRANSP, LV_PART_ITEMS);
+  lv_obj_set_style_border_width(wifi_table, 1, LV_PART_ITEMS);
+  lv_obj_set_style_border_side(wifi_table, LV_BORDER_SIDE_BOTTOM, LV_PART_ITEMS);
+  lv_obj_set_style_border_color(wifi_table, lv_color_white(), LV_PART_ITEMS);
+  lv_obj_set_style_border_opa(wifi_table, 18, LV_PART_ITEMS);
+  lv_obj_set_style_text_font(wifi_table, &manrope_16, LV_PART_ITEMS);
+  lv_obj_set_style_pad_ver(wifi_table, 14, LV_PART_ITEMS);
+  lv_obj_set_style_bg_color(wifi_table, lv_color_white(), LV_PART_ITEMS | LV_STATE_PRESSED);
+  lv_obj_set_style_bg_opa(wifi_table, 30, LV_PART_ITEMS | LV_STATE_PRESSED);
+
+  ui::card(wifi_right);
+  lv_obj_set_height(wifi_right, LV_PCT(100));
+  lv_obj_set_style_text_font(wifi_label, &manrope_20, 0);
+  lv_obj_set_style_radius(password_input, LV_RADIUS_CIRCLE, 0);
+  lv_obj_set_style_pad_hor(password_input, 18, 0);
+  lv_obj_set_style_pad_ver(password_input, 12, 0);
+  lv_obj_align(password_input, LV_ALIGN_TOP_MID, 0, 50);
+
+  ui::card_solid(kb);
+  lv_obj_set_style_text_font(kb, &manrope_16, LV_PART_ITEMS);
 
   wpa_event.register_callback("WifiPanel",
       [this](const std::string &event) { this->handle_wpa_event(event); });

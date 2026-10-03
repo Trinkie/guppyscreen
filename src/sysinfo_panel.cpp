@@ -2,6 +2,7 @@
 #include "utils.h"
 #include "config.h"
 #include "theme.h"
+#include "ui_style.h"
 #include "spdlog/spdlog.h"
 #include "guppyscreen.h"
 
@@ -220,8 +221,45 @@ SysInfoPanel::SysInfoPanel()
                       LV_EVENT_VALUE_CHANGED, this);
 
 
-  lv_obj_add_flag(back_btn.get_container(), LV_OBJ_FLAG_FLOATING);	
-  lv_obj_align(back_btn.get_container(), LV_ALIGN_BOTTOM_RIGHT, 0, 0);
+  // glass layout: settings list card on the left, info card on the right
+  back_btn.make_pill(ICON_BACK, ButtonContainer::PILL_GLASS, true);
+  ui::panel_header(cont, back_btn.get_container(), "System");
+  lv_obj_set_style_pad_column(cont, ui::GAP, 0);
+
+  for (lv_obj_t *side : {left_cont, right_cont}) {
+    ui::card(side);
+    lv_obj_set_style_pad_hor(side, 18, 0);
+    lv_obj_set_style_pad_ver(side, 6, 0);
+    lv_obj_set_style_pad_row(side, 0, 0);
+    lv_obj_set_height(side, LV_PCT(100));
+  }
+  lv_obj_set_width(left_cont, LV_PCT(58));
+  lv_obj_set_width(right_cont, LV_SIZE_CONTENT);
+  lv_obj_set_flex_grow(right_cont, 1);
+  lv_obj_set_style_pad_ver(right_cont, 16, 0);
+
+  lv_obj_t *rows[] = {disp_sleep_cont, ll_cont, estop_toggle_cont, z_icon_toggle_cont, theme_cont};
+  for (int i = 0; i < 5; i++) {
+    lv_obj_set_height(rows[i], 62);
+    lv_obj_set_style_border_side(rows[i], LV_BORDER_SIDE_BOTTOM, 0);
+    lv_obj_set_style_border_width(rows[i], i < 4 ? 1 : 0, 0);
+    lv_obj_set_style_border_color(rows[i], lv_color_white(), 0);
+    lv_obj_set_style_border_opa(rows[i], 18, 0);
+    lv_obj_set_style_text_font(lv_obj_get_child(rows[i], 1), &manrope_16, 0);  // the label is created after the control
+  }
+  for (lv_obj_t *dd : {display_sleep_dd, loglevel_dd, theme_dd}) {
+    lv_obj_set_width(dd, 150);
+    lv_obj_set_style_text_font(dd, &manrope_16, 0);
+    lv_obj_set_style_radius(dd, LV_RADIUS_CIRCLE, 0);
+    lv_obj_set_style_border_width(dd, 0, 0);
+    lv_obj_set_style_pad_hor(dd, 16, 0);
+  }
+  for (lv_obj_t *sw : {prompt_estop_toggle, z_icon_toggle}) {
+    lv_obj_set_size(sw, 56, 30);
+  }
+  lv_obj_set_style_text_font(network_label, &manrope_16, 0);
+  lv_obj_set_style_text_color(network_label, ui::text2(), 0);
+  lv_obj_set_style_text_line_space(network_label, 6, 0);
 }
 
 SysInfoPanel::~SysInfoPanel() {
