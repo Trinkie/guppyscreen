@@ -28,7 +28,8 @@ class ButtonContainer {
   enum PillVariant { PILL_GLASS, PILL_ACCENT, PILL_DANGER_OUTLINE, PILL_DANGER_FILL };
   // turns the image tile into a horizontal capsule with an icon font glyph;
   // an empty text makes a round icon-only button
-  void make_pill(const char *icon, PillVariant variant);
+  // icon may be NULL (text only); icon_only hides the text and makes a round button
+  void make_pill(const char *icon, PillVariant variant, bool icon_only = false);
 
   void handle_callback(lv_event_t *event);
 

@@ -576,6 +576,33 @@ void danger_fill(lv_obj_t *obj) {
   lv_obj_add_style(obj, &st_danger_fill, LV_PART_MAIN);
 }
 
+void slider_big(lv_obj_t *slider) {
+  lv_obj_set_height(slider, 44);
+  lv_obj_set_style_radius(slider, LV_RADIUS_CIRCLE, LV_PART_MAIN);
+  lv_obj_set_style_radius(slider, LV_RADIUS_CIRCLE, LV_PART_INDICATOR);
+  lv_obj_set_style_pad_all(slider, -7, LV_PART_KNOB);
+  lv_obj_set_style_bg_color(slider, lv_color_white(), LV_PART_KNOB);
+  lv_obj_set_style_bg_opa(slider, LV_OPA_COVER, LV_PART_KNOB);
+  lv_obj_set_style_shadow_width(slider, 0, LV_PART_KNOB);
+  lv_obj_set_style_outline_width(slider, 0, LV_PART_KNOB | LV_STATE_FOCUS_KEY);
+  lv_obj_set_style_transform_width(slider, 2, LV_PART_KNOB | LV_STATE_PRESSED);
+  lv_obj_set_style_transform_height(slider, 2, LV_PART_KNOB | LV_STATE_PRESSED);
+  lv_obj_set_ext_click_area(slider, 8);
+}
+
+lv_obj_t *panel_header(lv_obj_t *panel, lv_obj_t *back_btn, const char *title) {
+  lv_obj_set_style_pad_all(panel, GAP, 0);
+  lv_obj_set_style_pad_top(panel, GAP + 56 + GAP, 0);
+
+  lv_obj_add_flag(back_btn, LV_OBJ_FLAG_FLOATING);
+  lv_obj_align(back_btn, LV_ALIGN_TOP_LEFT, 0, -(56 + GAP));
+
+  lv_obj_t *t = text_label(panel, title, &manrope_28, text());
+  lv_obj_add_flag(t, LV_OBJ_FLAG_FLOATING);
+  lv_obj_align(t, LV_ALIGN_TOP_LEFT, 56 + 16, -(56 + GAP) + 10);
+  return t;
+}
+
 lv_obj_t *icon_label(lv_obj_t *parent, const char *icon, const lv_font_t *font, lv_color_t color) {
   lv_obj_t *l = lv_label_create(parent);
   lv_label_set_text(l, icon);

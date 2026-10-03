@@ -2,6 +2,7 @@
 #include "state.h"
 #include "utils.h"
 #include "spdlog/spdlog.h"
+#include "ui_style.h"
 
 LV_IMG_DECLARE(cancel);
 LV_IMG_DECLARE(light_img);
@@ -17,14 +18,13 @@ LedPanel::LedPanel(KWebSocketClient &websocket_client, std::mutex &lock)
     lv_obj_clear_flag(ledpanel_cont, LV_OBJ_FLAG_SCROLLABLE);
     lv_obj_set_size(ledpanel_cont, lv_pct(100), lv_pct(100));
 
-    lv_obj_set_style_pad_all(ledpanel_cont, 0, 0);
-    
-    lv_obj_center(leds_cont);
-    lv_obj_set_size(leds_cont, lv_pct(80), lv_pct(100));
-    lv_obj_set_flex_flow(leds_cont, LV_FLEX_FLOW_COLUMN);
-    lv_obj_set_flex_align(leds_cont, LV_FLEX_ALIGN_SPACE_EVENLY, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+    back_btn.make_pill(ICON_BACK, ButtonContainer::PILL_GLASS, true);
+    ui::panel_header(ledpanel_cont, back_btn.get_container(), "Lights");
 
-    lv_obj_align(back_btn.get_container(), LV_ALIGN_BOTTOM_RIGHT, 0, -20);
+    lv_obj_set_size(leds_cont, lv_pct(100), lv_pct(100));
+    lv_obj_set_style_pad_all(leds_cont, 0, 0);
+    lv_obj_set_style_pad_row(leds_cont, ui::GAP, 0);
+    lv_obj_set_flex_flow(leds_cont, LV_FLEX_FLOW_COLUMN);
 
     ws.register_notify_update(this);
 }

@@ -103,7 +103,7 @@ void ButtonContainer::set_image(const void *img) {
   lv_imgbtn_set_src(btn, LV_IMGBTN_STATE_RELEASED, NULL, img, NULL);
 }
 
-void ButtonContainer::make_pill(const char *icon, PillVariant variant) {
+void ButtonContainer::make_pill(const char *icon, PillVariant variant, bool icon_only) {
   lv_obj_add_flag(btn, LV_OBJ_FLAG_HIDDEN);
 
   switch (variant) {
@@ -133,14 +133,17 @@ void ButtonContainer::make_pill(const char *icon, PillVariant variant) {
   lv_obj_set_flex_align(btn_cont, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
   lv_obj_set_height(btn_cont, 56);
 
-  pill_icon = lv_label_create(btn_cont);
-  lv_label_set_text(pill_icon, icon);
-  lv_obj_set_style_text_font(pill_icon, &mdi_28, 0);
-  lv_obj_move_to_index(pill_icon, 0);
+  if (icon != NULL) {
+    pill_icon = lv_label_create(btn_cont);
+    lv_label_set_text(pill_icon, icon);
+    lv_obj_set_style_text_font(pill_icon, &mdi_28, 0);
+    lv_obj_move_to_index(pill_icon, 0);
+  }
 
   lv_obj_set_width(label, LV_SIZE_CONTENT);
   lv_obj_set_style_text_font(label, &manrope_20, 0);
-  if (lv_label_get_text(label)[0] == '\0') {
+  lv_obj_set_style_text_align(label, LV_TEXT_ALIGN_CENTER, 0);
+  if (icon_only || lv_label_get_text(label)[0] == '\0') {
     lv_obj_add_flag(label, LV_OBJ_FLAG_HIDDEN);
     lv_obj_set_style_pad_hor(btn_cont, 0, 0);
     lv_obj_set_width(btn_cont, 56);

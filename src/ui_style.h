@@ -16,37 +16,73 @@ LV_FONT_DECLARE(manrope_48);
 LV_FONT_DECLARE(mdi_20);
 LV_FONT_DECLARE(mdi_28);
 
-// Material Design Icons glyphs available in mdi_20 / mdi_28
-#define ICON_HOME         "\xF3\xB0\x8B\x9C" // U+F02DC
-#define ICON_MACROS       "\xF3\xB1\xB2\x83" // U+F1C83
-#define ICON_CONSOLE      "\xF3\xB0\x86\x8D" // U+F018D
-#define ICON_TUNE         "\xF3\xB1\x95\x82" // U+F1542
-#define ICON_SETTINGS     "\xF3\xB0\x92\x93" // U+F0493
-#define ICON_MOVE         "\xF3\xB0\x81\x81" // U+F0041
-#define ICON_NOZZLE       "\xF3\xB0\xB9\x9B" // U+F0E5B
-#define ICON_NOZZLE_HEAT  "\xF3\xB1\xA2\xB8" // U+F18B8
-#define ICON_FAN          "\xF3\xB0\x88\x90" // U+F0210
-#define ICON_LIGHT        "\xF3\xB0\x8C\xB6" // U+F0336
-#define ICON_COOLDOWN     "\xF3\xB0\x9C\x97" // U+F0717
-#define ICON_PRINTER      "\xF3\xB0\x90\xAB" // U+F042B
-#define ICON_BED          "\xF3\xB1\xA9\x85" // U+F1A45
-#define ICON_THERMO       "\xF3\xB0\x94\x8F" // U+F050F
-#define ICON_CHAMBER      "\xF3\xB0\x86\xA7" // U+F01A7
-#define ICON_LAYERS       "\xF3\xB0\xBD\x98" // U+F0F58
-#define ICON_SPEED        "\xF3\xB0\x93\x85" // U+F04C5
-#define ICON_FLOW         "\xF3\xB0\x96\x8C" // U+F058C
-#define ICON_ZOFFSET      "\xF3\xB0\xA1\x8D" // U+F084D
-#define ICON_PAUSE        "\xF3\xB0\x8F\xA4" // U+F03E4
-#define ICON_PLAY         "\xF3\xB0\x90\x8A" // U+F040A
-#define ICON_CLOSE        "\xF3\xB0\x85\x96" // U+F0156
-#define ICON_ESTOP        "\xF3\xB0\x80\xA9" // U+F0029
-#define ICON_BACK         "\xF3\xB0\x81\x8D" // U+F004D
-#define ICON_HOURGLASS    "\xF3\xB0\x94\x9F" // U+F051F
-#define ICON_CLOCK        "\xF3\xB0\x85\x90" // U+F0150
-#define ICON_PALETTE      "\xF3\xB0\x8F\x98" // U+F03D8
-#define ICON_BLUR         "\xF3\xB0\x82\xB5" // U+F00B5
-#define ICON_WIFI         "\xF3\xB0\x96\xA9" // U+F05A9
-#define ICON_CHECK        "\xF3\xB0\x84\xAC" // U+F012C
+// Material Design Icons glyphs available in mdi_20 / mdi_28 (tools/gen_icons.js)
+#define ICON_HOME           "\xF3\xB0\x8B\x9C" // U+F02DC
+#define ICON_MACROS         "\xF3\xB1\xB2\x83" // U+F1C83
+#define ICON_CONSOLE        "\xF3\xB0\x86\x8D" // U+F018D
+#define ICON_TUNE           "\xF3\xB1\x95\x82" // U+F1542
+#define ICON_SETTINGS       "\xF3\xB0\x92\x93" // U+F0493
+#define ICON_MOVE           "\xF3\xB0\x81\x81" // U+F0041
+#define ICON_NOZZLE         "\xF3\xB0\xB9\x9B" // U+F0E5B
+#define ICON_NOZZLE_HEAT    "\xF3\xB1\xA2\xB8" // U+F18B8
+#define ICON_FAN            "\xF3\xB0\x88\x90" // U+F0210
+#define ICON_LIGHT          "\xF3\xB0\x8C\xB6" // U+F0336
+#define ICON_COOLDOWN       "\xF3\xB0\x9C\x97" // U+F0717
+#define ICON_PRINTER        "\xF3\xB0\x90\xAB" // U+F042B
+#define ICON_BED            "\xF3\xB1\xA9\x85" // U+F1A45
+#define ICON_THERMO         "\xF3\xB0\x94\x8F" // U+F050F
+#define ICON_CHAMBER        "\xF3\xB0\x86\xA7" // U+F01A7
+#define ICON_LAYERS         "\xF3\xB0\xBD\x98" // U+F0F58
+#define ICON_SPEED          "\xF3\xB0\x93\x85" // U+F04C5
+#define ICON_FLOW           "\xF3\xB0\x96\x8C" // U+F058C
+#define ICON_ZOFFSET        "\xF3\xB0\xA1\x8D" // U+F084D
+#define ICON_PAUSE          "\xF3\xB0\x8F\xA4" // U+F03E4
+#define ICON_PLAY           "\xF3\xB0\x90\x8A" // U+F040A
+#define ICON_CLOSE          "\xF3\xB0\x85\x96" // U+F0156
+#define ICON_ESTOP          "\xF3\xB0\x80\xA9" // U+F0029
+#define ICON_BACK           "\xF3\xB0\x81\x8D" // U+F004D
+#define ICON_HOURGLASS      "\xF3\xB0\x94\x9F" // U+F051F
+#define ICON_CLOCK          "\xF3\xB0\x85\x90" // U+F0150
+#define ICON_PALETTE        "\xF3\xB0\x8F\x98" // U+F03D8
+#define ICON_BLUR           "\xF3\xB0\x82\xB5" // U+F00B5
+#define ICON_WIFI           "\xF3\xB0\x96\xA9" // U+F05A9
+#define ICON_CHECK          "\xF3\xB0\x84\xAC" // U+F012C
+#define ICON_FAN_OFF        "\xF3\xB0\xA0\x9D" // U+F081D
+#define ICON_FOLDER         "\xF3\xB0\x89\x8B" // U+F024B
+#define ICON_FILE           "\xF3\xB0\x88\xA4" // U+F0224
+#define ICON_REFRESH        "\xF3\xB0\x91\x90" // U+F0450
+#define ICON_SORT_TIME      "\xF3\xB1\x95\x8B" // U+F154B
+#define ICON_SORT_AZ        "\xF3\xB0\x96\xBD" // U+F05BD
+#define ICON_CHEVRON_RIGHT  "\xF3\xB0\x85\x82" // U+F0142
+#define ICON_INFO           "\xF3\xB0\x8B\xBD" // U+F02FD
+#define ICON_PLUS           "\xF3\xB0\x90\x95" // U+F0415
+#define ICON_MINUS          "\xF3\xB0\x8D\xB4" // U+F0374
+#define ICON_ARROW_UP       "\xF3\xB0\x81\x9D" // U+F005D
+#define ICON_ARROW_DOWN     "\xF3\xB0\x81\x85" // U+F0045
+#define ICON_ARROW_LEFT     "\xF3\xB0\x81\x8D" // U+F004D
+#define ICON_ARROW_RIGHT    "\xF3\xB0\x81\x94" // U+F0054
+#define ICON_HOME_AXES      "\xF3\xB0\x9A\xA1" // U+F06A1
+#define ICON_LIGHT_OFF      "\xF3\xB0\xB9\x90" // U+F0E50
+#define ICON_LIGHT_ON       "\xF3\xB0\x9B\xA9" // U+F06E9
+#define ICON_MOTOR_OFF      "\xF3\xB0\xA9\x87" // U+F0A47
+#define ICON_EXTRUDE        "\xF3\xB0\x9E\x92" // U+F0792
+#define ICON_RETRACT        "\xF3\xB0\x9E\x95" // U+F0795
+#define ICON_SEND           "\xF3\xB0\x92\x8A" // U+F048A
+#define ICON_KEYBOARD       "\xF3\xB0\x8C\x8C" // U+F030C
+#define ICON_DELETE         "\xF3\xB0\xA7\xA7" // U+F09E7
+#define ICON_RESTART        "\xF3\xB0\x9C\x89" // U+F0709
+#define ICON_UPDATE         "\xF3\xB0\x9A\xB0" // U+F06B0
+#define ICON_CHIP           "\xF3\xB0\x98\x9A" // U+F061A
+#define ICON_NOZZLE_OUTLINE "\xF3\xB0\xB9\x9C" // U+F0E5C
+#define ICON_TUNE_H         "\xF3\xB0\x98\xAE" // U+F062E
+#define ICON_CHART          "\xF3\xB0\x84\xAA" // U+F012A
+#define ICON_LIST           "\xF3\xB0\x89\xB9" // U+F0279
+#define ICON_PLAY_CIRCLE    "\xF3\xB0\x90\x8D" // U+F040D
+#define ICON_Z_AXIS         "\xF3\xB0\xB5\x95" // U+F0D55
+#define ICON_AXES           "\xF3\xB0\xB5\x89" // U+F0D49
+#define ICON_GRID           "\xF3\xB0\x8B\x81" // U+F02C1
+#define ICON_SPEED_SLOW     "\xF3\xB0\xBE\x86" // U+F0F86
+#define ICON_FLOW_PCT       "\xF3\xB0\x96\x8E" // U+F058E
 
 namespace ui {
 
@@ -96,6 +132,10 @@ void clear(lv_obj_t *obj);         // transparent container, no padding
 void accent_fill(lv_obj_t *obj);   // accent background + on_accent text
 void danger_outline(lv_obj_t *obj);
 void danger_fill(lv_obj_t *obj);
+void slider_big(lv_obj_t *slider);  // thick capsule slider with the knob inside the track
+// Places a back button (already a pill) in the top left corner of a full
+// screen panel, adds the title next to it and reserves room for the header.
+lv_obj_t *panel_header(lv_obj_t *panel, lv_obj_t *back_btn, const char *title);
 lv_obj_t *icon_label(lv_obj_t *parent, const char *icon, const lv_font_t *font, lv_color_t color);
 lv_obj_t *text_label(lv_obj_t *parent, const char *txt, const lv_font_t *font, lv_color_t color);
 

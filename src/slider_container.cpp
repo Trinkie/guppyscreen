@@ -1,5 +1,6 @@
 #include "slider_container.h"
 #include "spdlog/spdlog.h"
+#include "ui_style.h"
 
 SliderContainer::SliderContainer(lv_obj_t *parent,
 				 const char *label_text,
@@ -72,32 +73,59 @@ SliderContainer::SliderContainer(lv_obj_t *parent,
   , max_btn(control_cont, max_btn_img, max_text, max_cb, max_cb_user_data)
   , unit(u)
 {
+  // glass card: [name ........ value] / [Off] [=====slider=====] [Max]
+  ui::card(cont);
   lv_obj_clear_flag(cont, LV_OBJ_FLAG_SCROLLABLE);
   lv_obj_set_flex_flow(cont, LV_FLEX_FLOW_COLUMN);
-  lv_obj_set_style_border_side(cont, LV_BORDER_SIDE_BOTTOM, 0);
-  lv_obj_set_style_border_width(cont, 2, 0);
-  lv_obj_set_style_pad_all(cont, 0, 0);
-  lv_obj_set_style_pad_row(cont, 0, 0);
+  lv_obj_set_style_pad_hor(cont, 16, 0);
+  lv_obj_set_style_pad_ver(cont, 12, 0);
+  lv_obj_set_style_pad_row(cont, 8, 0);
   lv_obj_set_size(cont, lv_pct(100), LV_SIZE_CONTENT);
-  lv_obj_align(cont, LV_ALIGN_CENTER, 0, 0);
 
+  lv_obj_t *head = lv_obj_create(cont);
+  ui::clear(head);
+  lv_obj_clear_flag(head, LV_OBJ_FLAG_SCROLLABLE | LV_OBJ_FLAG_CLICKABLE);
+  lv_obj_set_size(head, LV_PCT(100), LV_SIZE_CONTENT);
+  lv_obj_set_flex_flow(head, LV_FLEX_FLOW_ROW);
+  lv_obj_set_flex_align(head, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_END, LV_FLEX_ALIGN_END);
+  lv_obj_move_to_index(head, 0);
+
+  lv_obj_set_parent(label, head);
   lv_label_set_text(label, label_text);
-  lv_obj_set_width(label, LV_PCT(100));  
+  lv_obj_set_style_text_font(label, &manrope_16, 0);
+  lv_obj_set_style_text_color(label, ui::text2(), 0);
+  lv_obj_set_style_pad_bottom(label, 4, 0);
 
+  lv_obj_set_parent(slider_value, head);
+  lv_label_set_text(slider_value, fmt::format("0{}", unit).c_str());
+  lv_obj_set_style_text_font(slider_value, &manrope_28, 0);
+  lv_obj_set_style_text_color(slider_value, ui::text(), 0);
+
+  ui::clear(control_cont);
   lv_obj_clear_flag(control_cont, LV_OBJ_FLAG_SCROLLABLE);
   lv_obj_set_size(control_cont, lv_pct(100), LV_SIZE_CONTENT);
   lv_obj_set_flex_flow(control_cont, LV_FLEX_FLOW_ROW);
   lv_obj_set_flex_align(control_cont, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
-  lv_obj_set_style_pad_all(control_cont, 0, 0);
-  lv_obj_set_style_pad_bottom(control_cont, 7, 0);
+  lv_obj_set_style_pad_column(control_cont, 12, 0);
 
-  lv_obj_clear_flag(slider_cont, LV_OBJ_FLAG_SCROLLABLE);    
-  lv_obj_set_size(slider_cont, LV_PCT(45), LV_SIZE_CONTENT);
-  lv_obj_set_style_pad_all(slider_cont, 0, 0);
+  ui::clear(slider_cont);
+  lv_obj_clear_flag(slider_cont, LV_OBJ_FLAG_SCROLLABLE);
+  lv_obj_set_height(slider_cont, LV_SIZE_CONTENT);
+  lv_obj_set_flex_grow(slider_cont, 1);
+  lv_obj_set_style_pad_ver(slider_cont, 6, 0);
 
-  lv_obj_align(slider, LV_ALIGN_CENTER, 0, 0);
-  lv_obj_set_width(slider, LV_PCT(85));
-  lv_obj_align_to(slider_value, slider, LV_ALIGN_OUT_BOTTOM_MID, 0, 10);
+  lv_obj_set_width(slider, LV_PCT(100));
+  lv_obj_center(slider);
+  ui::slider_big(slider);
+
+  off_btn.make_pill(NULL, ButtonContainer::PILL_GLASS);
+  max_btn.make_pill(NULL, ButtonContainer::PILL_GLASS);
+  lv_obj_set_height(off_btn.get_container(), 44);
+  lv_obj_set_height(max_btn.get_container(), 44);
+  lv_obj_set_width(off_btn.get_container(), 84);
+  lv_obj_set_width(max_btn.get_container(), 84);
+  lv_obj_set_style_pad_hor(off_btn.get_container(), 0, 0);
+  lv_obj_set_style_pad_hor(max_btn.get_container(), 0, 0);
 
   if (max_text == NULL) {
     max_btn.hide();
@@ -141,7 +169,6 @@ void SliderContainer::set_range(int min_range, int max_range) {
 void SliderContainer::update_value(int value) {
   lv_label_set_text(slider_value, fmt::format("{}{}", value, unit).c_str());
   lv_slider_set_value(slider, value, LV_ANIM_ON);
-  lv_obj_align_to(slider_value, slider, LV_ALIGN_OUT_BOTTOM_MID, 0, 10);
 }
 
 void SliderContainer::handle_value_update(lv_event_t *event) {

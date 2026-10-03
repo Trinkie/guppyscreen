@@ -3,6 +3,7 @@
 #include "state.h"
 #include "utils.h"
 #include "spdlog/spdlog.h"
+#include "ui_style.h"
 
 #include <ctime>
 #include <iomanip>
@@ -20,22 +21,27 @@ FilePanel::FilePanel(lv_obj_t *parent)
   , fname_label(lv_label_create(file_cont))
   , detail_label(lv_label_create(file_cont))
 {
+  // thumbnail, file name and details stacked in the middle of the card
   lv_obj_set_size(file_cont, LV_PCT(100), LV_PCT(100));
-  lv_obj_clear_flag(file_cont, LV_OBJ_FLAG_SCROLLABLE);  
-  lv_obj_align(file_cont, LV_ALIGN_CENTER, 0, 0);
-  lv_obj_set_width(fname_label, LV_PCT(90));
-  lv_label_set_long_mode(fname_label, LV_LABEL_LONG_SCROLL);
+  lv_obj_clear_flag(file_cont, LV_OBJ_FLAG_SCROLLABLE);
+  lv_obj_set_style_pad_all(file_cont, 0, 0);
+  lv_obj_set_style_pad_row(file_cont, 8, 0);
+  lv_obj_set_flex_flow(file_cont, LV_FLEX_FLOW_COLUMN);
+  lv_obj_set_flex_align(file_cont, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+
+  lv_img_set_size_mode(thumbnail, LV_IMG_SIZE_MODE_REAL);
+
+  lv_obj_set_width(fname_label, LV_PCT(100));
+  lv_label_set_long_mode(fname_label, LV_LABEL_LONG_SCROLL_CIRCULAR);
   lv_obj_set_style_text_align(fname_label, LV_TEXT_ALIGN_CENTER, 0);
-  
+  lv_obj_set_style_text_font(fname_label, &manrope_20, 0);
+  lv_obj_set_style_text_color(fname_label, ui::text(), 0);
 
-  static lv_coord_t grid_main_row_dsc[] = {LV_GRID_FR(3), LV_GRID_FR(2), LV_GRID_TEMPLATE_LAST};
-  static lv_coord_t grid_main_col_dsc[] = {LV_GRID_FR(1), LV_GRID_TEMPLATE_LAST};
-
-  lv_obj_set_grid_dsc_array(file_cont, grid_main_col_dsc, grid_main_row_dsc);
-
-  lv_obj_set_grid_cell(thumbnail, LV_GRID_ALIGN_CENTER, 0, 1, LV_GRID_ALIGN_CENTER, 0, 1);
-  lv_obj_set_grid_cell(fname_label, LV_GRID_ALIGN_START, 0, 1, LV_GRID_ALIGN_START, 1, 1);
-  lv_obj_set_grid_cell(detail_label, LV_GRID_ALIGN_CENTER, 0, 1, LV_GRID_ALIGN_CENTER, 1, 1);
+  lv_obj_set_width(detail_label, LV_PCT(100));
+  lv_obj_set_style_text_align(detail_label, LV_TEXT_ALIGN_CENTER, 0);
+  lv_obj_set_style_text_font(detail_label, &manrope_16, 0);
+  lv_obj_set_style_text_color(detail_label, ui::text2(), 0);
+  lv_obj_set_style_text_line_space(detail_label, 4, 0);
 }
 
 FilePanel::~FilePanel() {
@@ -64,19 +70,19 @@ void FilePanel::refresh_view(json &j, const std::string &gcode_path) {
   auto filename = fs::path(gcode_path).filename();
   lv_label_set_text(fname_label, filename.string().c_str());
   
-  std::string detail = fmt::format("Filament Weight: {} g\nPrint Time: {}\nSize: {} MB\nModified: {}",
-				   fweight > 0 ? std::to_string(fweight) : "(unknown)",
-				   eta > 0 ? KUtils::eta_string(eta) : "(unknown)",
+  std::string detail = fmt::format("{}  " LV_SYMBOL_BULLET "  {} g\n{} MB  " LV_SYMBOL_BULLET "  {}",
+				   eta > 0 ? KUtils::eta_string(eta) : "--",
+				   fweight > 0 ? std::to_string(fweight) : "--",
 				   KUtils::bytes_to_mb(j["result"]["size"].template get<size_t>()),
 				   time_stream.str());
+  lv_label_set_text(detail_label, detail.c_str());
 
   auto width_scale = (double)lv_disp_get_physical_hor_res(NULL) / 800.0;
   auto thumb_detail = KUtils::get_thumbnail(gcode_path, j, width_scale);
-  std::string fullpath = thumb_detail.first;    
+  std::string fullpath = thumb_detail.first;
   if (fullpath.length() > 0) {
-    lv_label_set_text(detail_label, detail.c_str());
     auto screen_width = lv_disp_get_physical_hor_res(NULL);
-    uint32_t normalized_thumb_scale = ((0.29 * (double)screen_width) / (double)thumb_detail.second) * 256;
+    uint32_t normalized_thumb_scale = ((0.21 * (double)screen_width) / (double)thumb_detail.second) * 256;
     lv_img_set_src(thumbnail, ("A:" + fullpath).c_str());
     lv_img_set_zoom(thumbnail, normalized_thumb_scale);
   } else {

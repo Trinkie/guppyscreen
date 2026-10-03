@@ -3,6 +3,7 @@
 #include "state.h"
 #include "utils.h"
 #include "spdlog/spdlog.h"
+#include "ui_style.h"
 
 #include <map>
 #include <sstream>
@@ -46,98 +47,133 @@ PrintPanel::PrintPanel(KWebSocketClient &websocket, std::mutex &lock, PrintStatu
   lv_obj_set_size(files_cont, LV_PCT(100), LV_PCT(100));
   lv_obj_clear_flag(files_cont, LV_OBJ_FLAG_SCROLLABLE);
   lv_obj_set_flex_flow(files_cont, LV_FLEX_FLOW_ROW);
-  lv_obj_set_style_pad_all(files_cont, 0, 0);
+  lv_obj_set_style_pad_column(files_cont, ui::GAP, 0);
 
-  // left side cont
-  lv_obj_set_size(left_cont, LV_PCT(50), LV_PCT(100));
+  // header: back, title, sort/reload pills on the right
+  lv_obj_set_parent(back_btn.get_container(), files_cont);
+  back_btn.make_pill(ICON_BACK, ButtonContainer::PILL_GLASS, true);
+  ui::panel_header(files_cont, back_btn.get_container(), "Files");
+
+  ui::clear(file_table_btns);
+  lv_obj_set_parent(file_table_btns, files_cont);
+  lv_obj_add_flag(file_table_btns, LV_OBJ_FLAG_FLOATING);
+  lv_obj_clear_flag(file_table_btns, LV_OBJ_FLAG_SCROLLABLE);
+  lv_obj_set_size(file_table_btns, LV_SIZE_CONTENT, 48);
+  lv_obj_set_flex_flow(file_table_btns, LV_FLEX_FLOW_ROW);
+  lv_obj_set_flex_align(file_table_btns, LV_FLEX_ALIGN_END, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+  lv_obj_set_style_pad_column(file_table_btns, 8, 0);
+  lv_obj_align(file_table_btns, LV_ALIGN_TOP_RIGHT, 0, -(56 + ui::GAP) + 4);
+
+  struct { lv_obj_t *btn; const char *txt; } sort_btns[] = {
+    {refresh_btn, ICON_REFRESH},
+    {modified_sort_btn, ICON_SORT_TIME " Recent"},
+    {az_sort_btn, ICON_SORT_AZ " A-Z"},
+  };
+  for (auto &sb : sort_btns) {
+    lv_obj_set_height(sb.btn, 48);
+    lv_obj_set_style_pad_hor(sb.btn, 16, 0);
+    lv_obj_t *l = lv_label_create(sb.btn);
+    lv_label_set_text(l, sb.txt);
+    lv_obj_set_style_text_font(l, &manrope_16, 0);
+    lv_obj_center(l);
+    lv_obj_add_event_cb(sb.btn, &PrintPanel::_handle_btns, LV_EVENT_CLICKED, this);
+  }
+  // icons in the sort pills come from the icon font, the words from manrope
+  lv_obj_t *reload_label = lv_obj_get_child(refresh_btn, 0);
+  lv_obj_set_style_text_font(reload_label, &mdi_20, 0);
+  lv_obj_set_width(refresh_btn, 48);
+  lv_obj_set_style_pad_hor(refresh_btn, 0, 0);
+  for (lv_obj_t *sb : {modified_sort_btn, az_sort_btn}) {
+    lv_obj_t *l = lv_obj_get_child(sb, 0);
+    lv_label_set_text(l, sb == modified_sort_btn ? "Recent" : "A-Z");
+  }
+
+  // left: file list card
+  ui::card(left_cont);
+  lv_obj_set_size(left_cont, LV_PCT(58), LV_PCT(100));
   lv_obj_clear_flag(left_cont, LV_OBJ_FLAG_SCROLLABLE);
   lv_obj_set_flex_flow(left_cont, LV_FLEX_FLOW_COLUMN);
-  lv_obj_set_style_pad_all(left_cont, 0, 0);
-
-  // file view buttons
-  lv_obj_t * label = NULL;
-  
-  label = lv_label_create(refresh_btn);
-  lv_label_set_text(label, LV_SYMBOL_REFRESH " Reload");
-  lv_obj_center(label);
-
-  label = lv_label_create(modified_sort_btn);
-  lv_label_set_text(label, LV_SYMBOL_LIST " Modified");
-  lv_obj_center(label);
-
-  label = lv_label_create(az_sort_btn);
-  lv_label_set_text(label, LV_SYMBOL_LIST " A-Z");
-  lv_obj_center(label);
-
-  lv_obj_add_event_cb(refresh_btn, &PrintPanel::_handle_btns, LV_EVENT_CLICKED, this);
-  lv_obj_add_event_cb(modified_sort_btn, &PrintPanel::_handle_btns, LV_EVENT_CLICKED, this);
-  lv_obj_add_event_cb(az_sort_btn, &PrintPanel::_handle_btns, LV_EVENT_CLICKED, this);
-  
-  lv_obj_set_size(file_table_btns, LV_PCT(100), LV_SIZE_CONTENT);
-  lv_obj_set_style_pad_all(file_table_btns, 2, 0);
-
-  lv_obj_clear_flag(file_table_btns, LV_OBJ_FLAG_SCROLLABLE);
-  lv_obj_set_flex_flow(file_table_btns, LV_FLEX_FLOW_ROW);
-  lv_obj_set_flex_align(file_table_btns, LV_FLEX_ALIGN_SPACE_EVENLY, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_END);
+  lv_obj_set_style_pad_all(left_cont, 6, 0);
+  lv_obj_set_style_clip_corner(left_cont, true, 0);
 
   lv_obj_set_size(file_table, LV_PCT(100), LV_PCT(100));
-  lv_table_set_col_width(file_table, 0, LV_PCT(100));
   lv_table_set_col_cnt(file_table, 1);
+  lv_table_set_col_width(file_table, 0, 436);
+  lv_obj_set_style_bg_opa(file_table, LV_OPA_TRANSP, 0);
+  lv_obj_set_style_border_width(file_table, 0, 0);
+  lv_obj_set_style_pad_all(file_table, 0, 0);
+  lv_obj_set_style_bg_opa(file_table, LV_OPA_TRANSP, LV_PART_ITEMS);
+  lv_obj_set_style_border_width(file_table, 1, LV_PART_ITEMS);
+  lv_obj_set_style_border_side(file_table, LV_BORDER_SIDE_BOTTOM, LV_PART_ITEMS);
+  lv_obj_set_style_border_color(file_table, lv_color_white(), LV_PART_ITEMS);
+  lv_obj_set_style_border_opa(file_table, 18, LV_PART_ITEMS);
+  lv_obj_set_style_pad_ver(file_table, 14, LV_PART_ITEMS);
+  lv_obj_set_style_pad_hor(file_table, 14, LV_PART_ITEMS);
+  lv_obj_set_style_text_font(file_table, &manrope_16, LV_PART_ITEMS);
+  lv_obj_set_style_text_color(file_table, ui::text(), LV_PART_ITEMS);
+  lv_obj_set_style_bg_color(file_table, lv_color_white(), LV_PART_ITEMS | LV_STATE_PRESSED);
+  lv_obj_set_style_bg_opa(file_table, 30, LV_PART_ITEMS | LV_STATE_PRESSED);
   lv_obj_add_event_cb(file_table, &PrintPanel::_handle_callback, LV_EVENT_ALL, this);
   lv_obj_set_scroll_dir(file_table, LV_DIR_TOP | LV_DIR_BOTTOM);
 
-  lv_obj_set_size(file_view, LV_PCT(50), LV_PCT(100));
+  // right: selected file card with actions
+  ui::card(file_view);
+  lv_obj_set_height(file_view, LV_PCT(100));
+  lv_obj_set_flex_grow(file_view, 1);
   lv_obj_clear_flag(file_view, LV_OBJ_FLAG_SCROLLABLE);
+  lv_obj_set_style_pad_all(file_view, 14, 0);
+  lv_obj_set_style_pad_row(file_view, 12, 0);
+  lv_obj_set_flex_flow(file_view, LV_FLEX_FLOW_COLUMN);
 
-  static lv_coord_t grid_main_row_dsc[] = {LV_GRID_FR(8), LV_GRID_FR(1), LV_GRID_TEMPLATE_LAST};
-  static lv_coord_t grid_main_col_dsc[] = {LV_GRID_FR(1), LV_GRID_FR(1), LV_GRID_FR(1), LV_GRID_TEMPLATE_LAST};
-  lv_obj_set_grid_dsc_array(file_view, grid_main_col_dsc, grid_main_row_dsc);
-  lv_obj_set_grid_cell(file_panel.get_container(), LV_GRID_ALIGN_CENTER, 0, 3, LV_GRID_ALIGN_CENTER, 0, 1);
+  lv_obj_set_width(file_panel.get_container(), LV_PCT(100));
+  lv_obj_set_flex_grow(file_panel.get_container(), 1);
 
-  lv_obj_set_grid_cell(status_btn.get_container(), LV_GRID_ALIGN_CENTER, 0, 1, LV_GRID_ALIGN_END, 1, 1);  
-  lv_obj_set_grid_cell(print_btn.get_container(), LV_GRID_ALIGN_CENTER, 1, 1, LV_GRID_ALIGN_END, 1, 1);
-  lv_obj_set_grid_cell(back_btn.get_container(), LV_GRID_ALIGN_CENTER, 2, 1, LV_GRID_ALIGN_END, 1, 1);
+  lv_obj_t *actions = lv_obj_create(file_view);
+  ui::clear(actions);
+  lv_obj_clear_flag(actions, LV_OBJ_FLAG_SCROLLABLE);
+  lv_obj_set_size(actions, LV_PCT(100), 56);
+  lv_obj_set_flex_flow(actions, LV_FLEX_FLOW_ROW);
+  lv_obj_set_style_pad_column(actions, 10, 0);
+  lv_obj_set_parent(status_btn.get_container(), actions);
+  lv_obj_set_parent(print_btn.get_container(), actions);
+  status_btn.make_pill(ICON_INFO, ButtonContainer::PILL_GLASS, true);
+  print_btn.make_pill(ICON_PRINTER, ButtonContainer::PILL_ACCENT);
+  lv_obj_set_flex_grow(print_btn.get_container(), 1);
 
-  lv_obj_move_foreground(back_btn.get_container());
-  lv_obj_move_foreground(print_btn.get_container());
-  lv_obj_move_foreground(status_btn.get_container());      
-
-  // prompt
+  // "printing in progress" prompt
   lv_obj_add_flag(prompt_cont, LV_OBJ_FLAG_HIDDEN);  
   lv_obj_set_size(prompt_cont, LV_PCT(100), LV_PCT(100));
   lv_obj_clear_flag(prompt_cont, LV_OBJ_FLAG_SCROLLABLE);
-  lv_obj_set_style_bg_opa(prompt_cont, LV_OPA_70, 0);
+  lv_obj_set_style_bg_img_src(prompt_cont, NULL, 0);
+  lv_obj_set_style_bg_color(prompt_cont, lv_color_black(), 0);
+  lv_obj_set_style_bg_opa(prompt_cont, LV_OPA_60, 0);
 
-  lv_obj_set_size(msgbox, LV_PCT(60), LV_PCT(30));
-  lv_obj_set_style_border_width(msgbox, 2, 0);
-  lv_obj_set_style_bg_color(msgbox, lv_palette_darken(LV_PALETTE_GREY, 1), 0);
-  
-  lv_obj_align(msgbox, LV_ALIGN_CENTER, 0, 0);
+  ui::card_solid(msgbox);
+  lv_obj_set_size(msgbox, 460, LV_SIZE_CONTENT);
+  lv_obj_set_style_pad_all(msgbox, 22, 0);
+  lv_obj_set_style_pad_row(msgbox, 18, 0);
+  lv_obj_set_style_pad_column(msgbox, 10, 0);
+  lv_obj_set_flex_flow(msgbox, LV_FLEX_FLOW_ROW_WRAP);
+  lv_obj_set_flex_align(msgbox, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+  lv_obj_center(msgbox);
 
-  lv_obj_add_event_cb(job_btn, &PrintPanel::_handle_btns, LV_EVENT_CLICKED, this);
-  lv_obj_align(job_btn, LV_ALIGN_BOTTOM_MID, 0, 0);
+  lv_obj_t *msg = ui::text_label(msgbox, "A print is already running", &manrope_20, ui::text());
+  lv_obj_set_width(msg, LV_PCT(100));
+  lv_obj_set_style_text_align(msg, LV_TEXT_ALIGN_CENTER, 0);
+  lv_obj_move_to_index(msg, 0);
 
-  lv_obj_add_event_cb(cancel_btn, &PrintPanel::_handle_btns, LV_EVENT_CLICKED, this);
-  lv_obj_align(cancel_btn, LV_ALIGN_BOTTOM_RIGHT, 0, 0);
-
-  lv_obj_add_event_cb(queue_btn, &PrintPanel::_handle_btns, LV_EVENT_CLICKED, this);
-  lv_obj_align(queue_btn, LV_ALIGN_BOTTOM_LEFT, 0, 0);
-  
-  label = lv_label_create(job_btn);
-  lv_label_set_text(label, "View Job");
-  lv_obj_center(label);
-
-  label = lv_label_create(cancel_btn);
-  lv_label_set_text(label, "Cancel");
-  lv_obj_center(label);
-
-  label = lv_label_create(queue_btn);
-  lv_label_set_text(label, "Queue Job");
-  lv_obj_center(label);
-
-  label = lv_label_create(msgbox);
-  lv_label_set_text(label, "Printing in progress...");
-  lv_obj_align(label, LV_ALIGN_TOP_MID, 0, 0);
+  struct { lv_obj_t *btn; const char *txt; } prompt_btns[] = {
+    {queue_btn, "Queue Job"}, {job_btn, "View Job"}, {cancel_btn, "Close"},
+  };
+  for (auto &pb : prompt_btns) {
+    lv_obj_set_height(pb.btn, 48);
+    lv_obj_set_style_pad_hor(pb.btn, 18, 0);
+    lv_obj_t *l = lv_label_create(pb.btn);
+    lv_label_set_text(l, pb.txt);
+    lv_obj_set_style_text_font(l, &manrope_16, 0);
+    lv_obj_center(l);
+    lv_obj_add_event_cb(pb.btn, &PrintPanel::_handle_btns, LV_EVENT_CLICKED, this);
+  }
 
   ws.register_notify_update(this);
 }
