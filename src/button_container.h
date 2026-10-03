@@ -25,6 +25,11 @@ class ButtonContainer {
 
   void set_image(const void *img);
 
+  enum PillVariant { PILL_GLASS, PILL_ACCENT, PILL_DANGER_OUTLINE, PILL_DANGER_FILL };
+  // turns the image tile into a horizontal capsule with an icon font glyph;
+  // an empty text makes a round icon-only button
+  void make_pill(const char *icon, PillVariant variant);
+
   void handle_callback(lv_event_t *event);
 
   void handle_prompt();
@@ -39,6 +44,7 @@ class ButtonContainer {
   lv_obj_t *btn_cont;
   lv_obj_t *btn;
   lv_obj_t *label;
+  lv_obj_t *pill_icon;
   std::string prompt_text;
   std::function<void()> prompt_callback;
 };

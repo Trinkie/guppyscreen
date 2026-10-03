@@ -15,6 +15,7 @@
 #include "lvgl/lvgl.h"
 
 #include <mutex>
+#include <vector>
 
 class SettingPanel {
  public:
@@ -32,8 +33,14 @@ class SettingPanel {
   };
 
  private:
+  void create_appearance();
+  void select_swatch();
+
   KWebSocketClient &ws;
   lv_obj_t *cont;
+  lv_obj_t *appearance;
+  lv_obj_t *acrylic_switch;
+  std::vector<lv_obj_t *> swatches;
 
 #ifndef OS_ANDROID
   WifiPanel wifi_panel;

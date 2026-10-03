@@ -1,5 +1,6 @@
 #include "setting_panel.h"
 #include "config.h"
+#include "ui_style.h"
 #include "spdlog/spdlog.h"
 #include "subprocess.hpp"
 
@@ -24,6 +25,8 @@ LV_IMG_DECLARE(print);
 SettingPanel::SettingPanel(KWebSocketClient &c, std::mutex &l, lv_obj_t *parent, SpoolmanPanel &sm)
   : ws(c)
   , cont(lv_obj_create(parent))
+  , appearance(NULL)
+  , acrylic_switch(NULL)
 #ifndef OS_ANDROID
   , wifi_panel(l)
 #endif
@@ -50,7 +53,10 @@ SettingPanel::SettingPanel(KWebSocketClient &c, std::mutex &l, lv_obj_t *parent,
   wifi_btn.disable();
 #endif
 
-  static lv_coord_t grid_main_row_dsc[] = {LV_GRID_FR(2), LV_GRID_FR(5), LV_GRID_FR(5), LV_GRID_TEMPLATE_LAST};
+  static lv_coord_t grid_main_row_dsc[] = {68, LV_GRID_FR(1), LV_GRID_FR(1), LV_GRID_TEMPLATE_LAST};
+  lv_obj_set_style_pad_all(cont, 0, 0);
+  lv_obj_set_style_pad_row(cont, ui::GAP, 0);
+  lv_obj_set_style_pad_column(cont, ui::GAP, 0);
   static lv_coord_t grid_main_col_dsc[] = {LV_GRID_FR(1), LV_GRID_FR(1), LV_GRID_FR(1), LV_GRID_FR(1),
       LV_GRID_TEMPLATE_LAST};
 
@@ -67,7 +73,8 @@ SettingPanel::SettingPanel(KWebSocketClient &c, std::mutex &l, lv_obj_t *parent,
   lv_obj_set_grid_cell(guppy_restart_btn.get_container(), LV_GRID_ALIGN_CENTER, 1, 1, LV_GRID_ALIGN_START, 2, 1);
   lv_obj_set_grid_cell(guppy_update_btn.get_container(), LV_GRID_ALIGN_CENTER, 2, 1, LV_GRID_ALIGN_START, 2, 1);
   lv_obj_set_grid_cell(printer_select_btn.get_container(), LV_GRID_ALIGN_CENTER, 3, 1, LV_GRID_ALIGN_START, 2, 1);
-  
+
+  create_appearance();
 }
 
 SettingPanel::~SettingPanel() {
@@ -131,4 +138,71 @@ void SettingPanel::handle_callback(lv_event_t *event) {
 
 void SettingPanel::enable_spoolman() {
   spoolman_btn.enable();
+}
+
+// Appearance card: accent color swatches and the acrylic (frosted glass) switch
+void SettingPanel::create_appearance() {
+  appearance = lv_obj_create(cont);
+  ui::card(appearance);
+  lv_obj_clear_flag(appearance, LV_OBJ_FLAG_SCROLLABLE);
+  lv_obj_set_style_pad_hor(appearance, 18, 0);
+  lv_obj_set_style_pad_ver(appearance, 0, 0);
+  lv_obj_set_style_pad_column(appearance, 10, 0);
+  lv_obj_set_flex_flow(appearance, LV_FLEX_FLOW_ROW);
+  lv_obj_set_flex_align(appearance, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+  lv_obj_set_grid_cell(appearance, LV_GRID_ALIGN_STRETCH, 0, 4, LV_GRID_ALIGN_STRETCH, 0, 1);
+
+  ui::text_label(appearance, "Accent", &manrope_20, ui::text());
+
+  for (size_t i = 0; i < ui::ACCENT_COUNT; i++) {
+    lv_obj_t *sw = lv_obj_create(appearance);
+    lv_obj_clear_flag(sw, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_add_flag(sw, LV_OBJ_FLAG_CLICKABLE);
+    lv_obj_set_size(sw, 32, 32);
+    lv_obj_set_style_radius(sw, LV_RADIUS_CIRCLE, 0);
+    lv_obj_set_style_bg_color(sw, ui::accent_preset(i), 0);
+    lv_obj_set_style_bg_opa(sw, LV_OPA_COVER, 0);
+    lv_obj_set_style_outline_color(sw, ui::accent_preset(i), 0);
+    lv_obj_set_style_outline_pad(sw, 3, 0);
+    lv_obj_set_style_outline_width(sw, 0, 0);
+    lv_obj_set_ext_click_area(sw, 4);
+    lv_obj_add_event_cb(sw, [](lv_event_t *e) {
+      SettingPanel *panel = (SettingPanel *)lv_event_get_user_data(e);
+      lv_obj_t *target = lv_event_get_current_target(e);
+      for (size_t idx = 0; idx < panel->swatches.size(); idx++) {
+        if (panel->swatches[idx] == target) {
+          ui::set_accent(ui::accent_preset(idx));
+        }
+      }
+      panel->select_swatch();
+    }, LV_EVENT_CLICKED, this);
+    swatches.push_back(sw);
+  }
+
+  lv_obj_t *spacer = lv_obj_create(appearance);
+  ui::clear(spacer);
+  lv_obj_clear_flag(spacer, LV_OBJ_FLAG_CLICKABLE);
+  lv_obj_set_height(spacer, 1);
+  lv_obj_set_flex_grow(spacer, 1);
+
+  ui::text_label(appearance, "Acrylic", &manrope_20, ui::text());
+  acrylic_switch = lv_switch_create(appearance);
+  lv_obj_set_size(acrylic_switch, 56, 30);
+  if (ui::acrylic()) {
+    lv_obj_add_state(acrylic_switch, LV_STATE_CHECKED);
+  }
+  lv_obj_add_event_cb(acrylic_switch, [](lv_event_t *e) {
+    lv_obj_t *sw = lv_event_get_target(e);
+    ui::set_acrylic(lv_obj_has_state(sw, LV_STATE_CHECKED));
+  }, LV_EVENT_VALUE_CHANGED, NULL);
+
+  select_swatch();
+}
+
+void SettingPanel::select_swatch() {
+  uint32_t current = lv_color_to32(ui::accent()) & 0xFFFFFF;
+  for (size_t i = 0; i < swatches.size(); i++) {
+    bool selected = (lv_color_to32(ui::accent_preset(i)) & 0xFFFFFF) == current;
+    lv_obj_set_style_outline_width(swatches[i], selected ? 2 : 0, 0);
+  }
 }

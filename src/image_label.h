@@ -26,6 +26,8 @@ class ImageLabel {
 
   lv_obj_t *get_container();
   void update_label(const char* value);
+  lv_obj_t *get_image();
+  lv_obj_t *get_label();
 
  private:
   lv_obj_t *cont;

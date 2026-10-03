@@ -76,3 +76,11 @@ void ImageLabel::update_label(const char *v) {
     lv_label_set_text(label, v);
   }
 }
+
+lv_obj_t *ImageLabel::get_image() {
+  return image;
+}
+
+lv_obj_t *ImageLabel::get_label() {
+  return label;
+}

@@ -3,6 +3,7 @@
 #include "state.h"
 #include "utils.h"
 #include "spdlog/spdlog.h"
+#include "ui_style.h"
 
 
 LV_IMG_DECLARE(extruder);
@@ -70,75 +71,150 @@ PrintStatusPanel::PrintStatusPanel(KWebSocketClient &websocket_client,
   , heater_bed_target(-1)
 {
   lv_obj_move_background(status_cont);
-  lv_obj_clear_flag(status_cont, LV_OBJ_FLAG_SCROLLABLE);  
+  lv_obj_clear_flag(status_cont, LV_OBJ_FLAG_SCROLLABLE);
   lv_obj_set_size(status_cont, LV_PCT(100), LV_PCT(100));
+  lv_obj_set_style_pad_all(status_cont, ui::GAP, 0);
+  lv_obj_set_style_pad_row(status_cont, ui::GAP, 0);
+  lv_obj_set_style_pad_column(status_cont, ui::GAP, 0);
 
-  static lv_coord_t grid_main_row_dsc_detail[] = {LV_GRID_FR(1), LV_GRID_FR(1), LV_GRID_FR(1), LV_GRID_FR(1),
-    LV_GRID_FR(1), LV_GRID_TEMPLATE_LAST};
-  static lv_coord_t grid_main_col_dsc_detail[] = {LV_GRID_FR(1), LV_GRID_FR(1), LV_GRID_TEMPLATE_LAST};
-  lv_obj_set_grid_dsc_array(detail_cont, grid_main_col_dsc_detail, grid_main_row_dsc_detail);
-
-  lv_obj_clear_flag(detail_cont, LV_OBJ_FLAG_SCROLLABLE);  
-  lv_obj_set_size(detail_cont, LV_PCT(60), LV_PCT(60));
-
-  //detail containter row 1
-  lv_obj_set_grid_cell(extruder_temp.get_container(), LV_GRID_ALIGN_START, 0, 1, LV_GRID_ALIGN_START, 0, 1);
-  lv_obj_set_grid_cell(bed_temp.get_container(), LV_GRID_ALIGN_START, 1, 1, LV_GRID_ALIGN_START, 0, 1);  
-
-  //detail containter row 2
-  lv_obj_set_grid_cell(print_speed.get_container(), LV_GRID_ALIGN_START, 0, 1, LV_GRID_ALIGN_START, 1, 1);
-  lv_obj_set_grid_cell(z_offset.get_container(), LV_GRID_ALIGN_START, 1, 1, LV_GRID_ALIGN_START, 1, 1);  
-
-  //detail containter row 3
-  lv_obj_set_grid_cell(flow_rate.get_container(), LV_GRID_ALIGN_START, 0, 1, LV_GRID_ALIGN_START, 2, 1);
-  lv_obj_set_grid_cell(layers.get_container(), LV_GRID_ALIGN_START, 1, 1, LV_GRID_ALIGN_START, 2, 1);
-
-  //detail containter row 4
-  lv_obj_set_grid_cell(elapsed.get_container(), LV_GRID_ALIGN_START, 0, 1, LV_GRID_ALIGN_START, 3, 1);
-  lv_obj_set_grid_cell(fan0.get_container(), LV_GRID_ALIGN_START, 1, 1, LV_GRID_ALIGN_START, 3, 1);
-
-  //detail containter row 5
-  lv_obj_set_grid_cell(time_left.get_container(), LV_GRID_ALIGN_START, 0, 1, LV_GRID_ALIGN_START, 4, 1);
-  // lv_obj_set_grid_cell(fan2.get_container(), LV_GRID_ALIGN_START, 1, 1, LV_GRID_ALIGN_START, 4, 1);  
-  
-  static lv_coord_t grid_main_row_dsc[] = {LV_GRID_FR(2), LV_GRID_FR(1), LV_GRID_TEMPLATE_LAST};
-  static lv_coord_t grid_main_col_dsc[] = {LV_GRID_FR(1), LV_GRID_FR(1), LV_GRID_TEMPLATE_LAST};
-
+  // [ model card | headline + stats ]
+  // [ action pills                  ]
+  static lv_coord_t grid_main_row_dsc[] = {LV_GRID_FR(1), 56, LV_GRID_TEMPLATE_LAST};
+  static lv_coord_t grid_main_col_dsc[] = {268, LV_GRID_FR(1), LV_GRID_TEMPLATE_LAST};
   lv_obj_set_grid_dsc_array(status_cont, grid_main_col_dsc, grid_main_row_dsc);
 
-  lv_obj_set_size(buttons_cont, LV_PCT(100), LV_PCT(40));
-  lv_obj_clear_flag(buttons_cont, LV_OBJ_FLAG_SCROLLABLE);  
-  lv_obj_set_flex_flow(buttons_cont, LV_FLEX_FLOW_ROW);
-  lv_obj_set_flex_align(buttons_cont, LV_FLEX_ALIGN_SPACE_EVENLY, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+  // model card: thumbnail and layer counter
+  ui::card(thumbnail_cont);
+  lv_obj_clear_flag(thumbnail_cont, LV_OBJ_FLAG_SCROLLABLE);
+  lv_obj_set_style_pad_all(thumbnail_cont, 14, 0);
+  lv_obj_set_style_pad_row(thumbnail_cont, 10, 0);
+  lv_obj_set_flex_flow(thumbnail_cont, LV_FLEX_FLOW_COLUMN);
+  lv_obj_set_flex_align(thumbnail_cont, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+  lv_obj_set_grid_cell(thumbnail_cont, LV_GRID_ALIGN_STRETCH, 0, 1, LV_GRID_ALIGN_STRETCH, 0, 1);
 
-  lv_obj_set_style_pad_all(pbar_cont, 0, 0);
-  lv_obj_set_size(pbar_cont, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
-  // lv_obj_set_style_border_width(pbar_cont, 2, 0);
-  // lv_obj_set_style_border_width(thumbnail_cont, 2, 0);
+  lv_img_set_size_mode(thumbnail, LV_IMG_SIZE_MODE_REAL);
 
-  auto bar_width = (double)lv_disp_get_physical_hor_res(NULL) * 0.35;
-  auto hscale = (double)lv_disp_get_physical_ver_res(NULL) / 480.0;
+  lv_obj_set_parent(layers.get_container(), thumbnail_cont);
 
-  lv_obj_set_size(progress_bar, bar_width, 20 * hscale);
-  lv_bar_set_value(progress_bar, 0, LV_ANIM_OFF);
-  lv_obj_center(progress_bar);
+  // right column
+  right_col = lv_obj_create(status_cont);
+  ui::clear(right_col);
+  lv_obj_clear_flag(right_col, LV_OBJ_FLAG_SCROLLABLE);
+  lv_obj_set_flex_flow(right_col, LV_FLEX_FLOW_COLUMN);
+  lv_obj_set_style_pad_row(right_col, ui::GAP, 0);
+  lv_obj_set_grid_cell(right_col, LV_GRID_ALIGN_STRETCH, 1, 1, LV_GRID_ALIGN_STRETCH, 0, 1);
+
+  // headline: file name, big percent, time left, progress bar
+  headline = lv_obj_create(right_col);
+  ui::card(headline);
+  lv_obj_clear_flag(headline, LV_OBJ_FLAG_SCROLLABLE);
+  lv_obj_set_size(headline, LV_PCT(100), LV_SIZE_CONTENT);
+  lv_obj_set_style_pad_hor(headline, 18, 0);
+  lv_obj_set_style_pad_ver(headline, 14, 0);
+  lv_obj_set_style_pad_row(headline, 8, 0);
+  lv_obj_set_flex_flow(headline, LV_FLEX_FLOW_COLUMN);
+
+  filename_label = ui::text_label(headline, "", &manrope_16, ui::text2());
+  lv_obj_set_width(filename_label, LV_PCT(100));
+  lv_label_set_long_mode(filename_label, LV_LABEL_LONG_DOT);
+
+  lv_obj_set_parent(pbar_cont, headline);
+  ui::clear(pbar_cont);
+  lv_obj_clear_flag(pbar_cont, LV_OBJ_FLAG_SCROLLABLE);
+  lv_obj_set_size(pbar_cont, LV_PCT(100), LV_SIZE_CONTENT);
+  lv_obj_set_flex_flow(pbar_cont, LV_FLEX_FLOW_ROW_WRAP);
+  lv_obj_set_flex_align(pbar_cont, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_END, LV_FLEX_ALIGN_END);
+  lv_obj_set_style_pad_row(pbar_cont, 10, 0);
 
   lv_label_set_text(progress_label, "0%");
-  lv_obj_center(progress_label);
+  lv_obj_set_style_text_font(progress_label, &manrope_48, 0);
+  lv_obj_move_to_index(progress_label, 0);
 
-  lv_obj_set_flex_flow(thumbnail_cont, LV_FLEX_FLOW_COLUMN);
-  lv_obj_set_flex_align(thumbnail_cont, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_START);
-  lv_obj_set_size(thumbnail_cont, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
-  lv_obj_set_style_pad_all(thumbnail_cont, 0, 0);
-  lv_obj_set_style_pad_row(thumbnail_cont, 20, 0);
+  lv_obj_t *eta_col = lv_obj_create(pbar_cont);
+  ui::clear(eta_col);
+  lv_obj_clear_flag(eta_col, LV_OBJ_FLAG_SCROLLABLE | LV_OBJ_FLAG_CLICKABLE);
+  lv_obj_set_size(eta_col, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
+  lv_obj_set_flex_flow(eta_col, LV_FLEX_FLOW_COLUMN);
+  lv_obj_set_flex_align(eta_col, LV_FLEX_ALIGN_END, LV_FLEX_ALIGN_END, LV_FLEX_ALIGN_END);
+  lv_obj_move_to_index(eta_col, 1);
+  lv_obj_set_parent(time_left.get_container(), eta_col);
+  lv_obj_set_parent(elapsed.get_container(), eta_col);
 
-  // row 1
-  lv_obj_set_grid_cell(thumbnail_cont, LV_GRID_ALIGN_CENTER, 0, 1, LV_GRID_ALIGN_CENTER, 0, 1);
-  lv_obj_set_grid_cell(detail_cont, LV_GRID_ALIGN_CENTER, 1, 1, LV_GRID_ALIGN_CENTER, 0, 1);  
+  lv_obj_set_size(progress_bar, LV_PCT(100), 8);
+  lv_bar_set_value(progress_bar, 0, LV_ANIM_OFF);
+  lv_obj_add_flag(progress_bar, LV_OBJ_FLAG_FLEX_IN_NEW_TRACK);
 
-  //row 2
-  lv_obj_set_grid_cell(buttons_cont, LV_GRID_ALIGN_CENTER, 0, 2, LV_GRID_ALIGN_CENTER, 1, 1);
-  
+  // stats: 3 x 2 glass cards
+  static lv_coord_t grid_detail_row_dsc[] = {LV_GRID_FR(1), LV_GRID_FR(1), LV_GRID_TEMPLATE_LAST};
+  static lv_coord_t grid_detail_col_dsc[] = {LV_GRID_FR(1), LV_GRID_FR(1), LV_GRID_FR(1), LV_GRID_TEMPLATE_LAST};
+  lv_obj_set_parent(detail_cont, right_col);
+  ui::clear(detail_cont);
+  lv_obj_clear_flag(detail_cont, LV_OBJ_FLAG_SCROLLABLE);
+  lv_obj_set_width(detail_cont, LV_PCT(100));
+  lv_obj_set_flex_grow(detail_cont, 1);
+  lv_obj_set_style_pad_row(detail_cont, 10, 0);
+  lv_obj_set_style_pad_column(detail_cont, 10, 0);
+  lv_obj_set_grid_dsc_array(detail_cont, grid_detail_col_dsc, grid_detail_row_dsc);
+
+  ImageLabel *stats[] = {&print_speed, &flow_rate, &fan0, &extruder_temp, &bed_temp, &z_offset};
+  for (int i = 0; i < 6; i++) {
+    lv_obj_t *c = stats[i]->get_container();
+    ui::card(c);
+    lv_obj_set_style_border_width(c, 1, 0);
+    lv_obj_set_style_radius(c, 16, 0);
+    lv_obj_set_style_pad_hor(c, 12, 0);
+    lv_obj_set_grid_cell(c, LV_GRID_ALIGN_STRETCH, i % 3, 1, LV_GRID_ALIGN_STRETCH, i / 3, 1);
+    lv_obj_set_style_img_recolor(stats[i]->get_image(), ui::text2(), 0);
+    lv_obj_set_style_img_recolor_opa(stats[i]->get_image(), LV_OPA_COVER, 0);
+    lv_obj_set_style_text_font(stats[i]->get_label(), &manrope_20, 0);
+  }
+
+  // inline items (layers, time left, elapsed): icon + text, no card
+  ImageLabel *inline_items[] = {&layers, &time_left, &elapsed};
+  for (auto *item : inline_items) {
+    lv_obj_t *c = item->get_container();
+    ui::clear(c);
+    lv_obj_set_size(c, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
+    lv_obj_set_flex_flow(c, LV_FLEX_FLOW_ROW);
+    lv_obj_set_flex_align(c, LV_FLEX_ALIGN_END, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+    lv_obj_set_style_pad_column(c, 4, 0);
+    lv_obj_set_style_img_recolor(item->get_image(), ui::text2(), 0);
+    lv_obj_set_style_img_recolor_opa(item->get_image(), LV_OPA_COVER, 0);
+    lv_img_set_zoom(item->get_image(), 80);
+    lv_obj_set_style_text_font(item->get_label(), &manrope_16, 0);
+    lv_obj_set_style_text_color(item->get_label(), ui::text2(), 0);
+  }
+  lv_obj_set_style_text_font(time_left.get_label(), &manrope_20, 0);
+  lv_obj_set_style_text_color(time_left.get_label(), ui::text(), 0);
+
+  // action pills
+  ui::clear(buttons_cont);
+  lv_obj_clear_flag(buttons_cont, LV_OBJ_FLAG_SCROLLABLE);
+  lv_obj_set_flex_flow(buttons_cont, LV_FLEX_FLOW_ROW);
+  lv_obj_set_flex_align(buttons_cont, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+  lv_obj_set_style_pad_column(buttons_cont, ui::GAP, 0);
+  lv_obj_set_grid_cell(buttons_cont, LV_GRID_ALIGN_STRETCH, 0, 2, LV_GRID_ALIGN_STRETCH, 1, 1);
+
+  back_btn.make_pill(ICON_BACK, ButtonContainer::PILL_GLASS);
+  finetune_btn.make_pill(ICON_TUNE, ButtonContainer::PILL_GLASS);
+  pause_btn.make_pill(ICON_PAUSE, ButtonContainer::PILL_ACCENT);
+  resume_btn.make_pill(ICON_PLAY, ButtonContainer::PILL_ACCENT);
+  cancel_btn.make_pill(ICON_CLOSE, ButtonContainer::PILL_DANGER_OUTLINE);
+  emergency_btn.make_pill(ICON_ESTOP, ButtonContainer::PILL_DANGER_FILL);
+
+  // order: Back, Tune, Pause/Resume, Cancel, E-stop
+  lv_obj_move_to_index(back_btn.get_container(), 0);
+  lv_obj_move_to_index(finetune_btn.get_container(), 1);
+  ButtonContainer *grow[] = {&finetune_btn, &pause_btn, &resume_btn, &cancel_btn};
+  for (auto *b : grow) {
+    lv_obj_set_width(b->get_container(), LV_SIZE_CONTENT);
+    lv_obj_set_flex_grow(b->get_container(), 1);
+  }
+  lv_obj_set_width(back_btn.get_container(), 56);
+  lv_obj_set_style_pad_hor(back_btn.get_container(), 0, 0);
+  lv_obj_add_flag(lv_obj_get_child(back_btn.get_container(), -1), LV_OBJ_FLAG_HIDDEN);
+  lv_obj_set_width(emergency_btn.get_container(), LV_SIZE_CONTENT);
+
   ws.register_notify_update(this);
 }
 
@@ -230,6 +306,7 @@ void PrintStatusPanel::populate() {
   if (!printfile.is_null()) {
     const std::string fname = printfile.template get<std::string>();
     if (fname.length() > 0) {
+      lv_label_set_text(filename_label, fname.c_str());
       json fname_input = {{"filename", fname }};
       ws.send_jsonrpc("server.files.metadata", fname_input,
 		      [fname, this](json &d) { this->handle_metadata(fname, d); });
@@ -290,7 +367,7 @@ void PrintStatusPanel::handle_metadata(const std::string &gcode_file, json &j) {
     const std::string img_path = "A:" + fullpath;
 
     auto screen_width = lv_disp_get_physical_hor_res(NULL);
-    uint32_t normalized_thumb_scale = ((0.34 * (double)screen_width) / (double)thumb_detail.second) * 256;
+    uint32_t normalized_thumb_scale = ((0.28 * (double)screen_width) / (double)thumb_detail.second) * 256;
     lv_img_set_src(thumbnail, img_path.c_str());
     lv_img_set_zoom(thumbnail, normalized_thumb_scale);
     mini_print_status.update_img(img_path, thumb_detail.second);

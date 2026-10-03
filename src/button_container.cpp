@@ -1,5 +1,6 @@
 #include "button_container.h"
 #include "config.h"
+#include "ui_style.h"
 #include "spdlog/spdlog.h"
 
 ButtonContainer::ButtonContainer(lv_obj_t *parent,
@@ -12,10 +13,15 @@ ButtonContainer::ButtonContainer(lv_obj_t *parent,
   : btn_cont(lv_obj_create(parent))
   , btn(lv_imgbtn_create(btn_cont))
   , label(lv_label_create(btn_cont))
+  , pill_icon(NULL)
   , prompt_text(prompt)
   , prompt_callback(pcb)
 {
   lv_obj_set_style_pad_all(btn_cont, 0, 0);
+  // glass tile
+  ui::card(btn_cont);
+  lv_obj_set_style_pad_ver(btn_cont, 8, 0);
+  lv_obj_set_style_bg_opa(btn_cont, 60, LV_STATE_PRESSED);
   auto width_scale = (double)lv_disp_get_physical_hor_res(NULL) / 800.0;
   lv_obj_set_size(btn_cont, 150 * width_scale, LV_SIZE_CONTENT);
 
@@ -95,6 +101,50 @@ void ButtonContainer::hide() {
 
 void ButtonContainer::set_image(const void *img) {
   lv_imgbtn_set_src(btn, LV_IMGBTN_STATE_RELEASED, NULL, img, NULL);
+}
+
+void ButtonContainer::make_pill(const char *icon, PillVariant variant) {
+  lv_obj_add_flag(btn, LV_OBJ_FLAG_HIDDEN);
+
+  switch (variant) {
+  case PILL_ACCENT:
+    ui::accent_fill(btn_cont);
+    lv_obj_set_style_bg_opa(btn_cont, 200, LV_STATE_PRESSED);
+    break;
+  case PILL_DANGER_OUTLINE:
+    ui::pill(btn_cont);
+    ui::danger_outline(btn_cont);
+    break;
+  case PILL_DANGER_FILL:
+    ui::danger_fill(btn_cont);
+    lv_obj_set_style_bg_opa(btn_cont, 200, LV_STATE_PRESSED);
+    break;
+  default:
+    ui::pill(btn_cont);
+    lv_obj_set_style_bg_opa(btn_cont, 60, LV_STATE_PRESSED);
+    break;
+  }
+  lv_obj_set_style_radius(btn_cont, LV_RADIUS_CIRCLE, 0);
+  lv_obj_set_style_border_width(btn_cont, variant == PILL_DANGER_OUTLINE ? 1 : 0, 0);
+  lv_obj_set_style_pad_all(btn_cont, 0, 0);
+  lv_obj_set_style_pad_hor(btn_cont, 18, 0);
+  lv_obj_set_style_pad_column(btn_cont, 8, 0);
+  lv_obj_set_flex_flow(btn_cont, LV_FLEX_FLOW_ROW);
+  lv_obj_set_flex_align(btn_cont, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+  lv_obj_set_height(btn_cont, 56);
+
+  pill_icon = lv_label_create(btn_cont);
+  lv_label_set_text(pill_icon, icon);
+  lv_obj_set_style_text_font(pill_icon, &mdi_28, 0);
+  lv_obj_move_to_index(pill_icon, 0);
+
+  lv_obj_set_width(label, LV_SIZE_CONTENT);
+  lv_obj_set_style_text_font(label, &manrope_20, 0);
+  if (lv_label_get_text(label)[0] == '\0') {
+    lv_obj_add_flag(label, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_set_style_pad_hor(btn_cont, 0, 0);
+    lv_obj_set_width(btn_cont, 56);
+  }
 }
 
 void ButtonContainer::handle_callback(lv_event_t *e) {
