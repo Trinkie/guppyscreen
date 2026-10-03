@@ -1,25 +1,12 @@
 #include "main_panel.h"
 #include "state.h"
+#include "config.h"
+#include "ui_style.h"
 #include "lvgl/lvgl.h"
 #include "spdlog/spdlog.h"
 
 #include <string>
-
-LV_IMG_DECLARE(filament_img);
-LV_IMG_DECLARE(light_img);
-LV_IMG_DECLARE(move);
-LV_IMG_DECLARE(print);
-LV_IMG_DECLARE(extruder);
-LV_IMG_DECLARE(bed);
-LV_IMG_DECLARE(fan);
-LV_IMG_DECLARE(heater);
-
-LV_FONT_DECLARE(materialdesign_font_40);
-#define MACROS_SYMBOL "\xF3\xB1\xB2\x83"
-#define CONSOLE_SYMBOL "\xF3\xB0\x86\x8D"
-#define TUNE_SYMBOL "\xF3\xB1\x95\x82"
-#define HOME_SYMBOL "\xF3\xB0\x8B\x9C"
-#define SETTING_SYMBOL "\xF3\xB0\x92\x93"
+#include <ctime>
 
 MainPanel::MainPanel(KWebSocketClient &websocket,
 		     std::mutex &lock,
@@ -28,15 +15,15 @@ MainPanel::MainPanel(KWebSocketClient &websocket,
   , ws(websocket)
   , homing_panel(ws, lock)
   , fan_panel(ws, lock)
-  , led_panel(ws, lock)    
-  , tabview(lv_tabview_create(lv_scr_act(), LV_DIR_LEFT, 60))
-  , main_tab(lv_tabview_add_tab(tabview, HOME_SYMBOL))
-  , macros_tab(lv_tabview_add_tab(tabview, MACROS_SYMBOL))
+  , led_panel(ws, lock)
+  , tabview(lv_tabview_create(lv_scr_act(), LV_DIR_LEFT, 64))
+  , main_tab(lv_tabview_add_tab(tabview, ICON_HOME))
+  , macros_tab(lv_tabview_add_tab(tabview, ICON_MACROS))
   , macros_panel(ws, lock, macros_tab)
-  , console_tab(lv_tabview_add_tab(tabview, CONSOLE_SYMBOL))
+  , console_tab(lv_tabview_add_tab(tabview, ICON_CONSOLE))
   , console_panel(ws, lock, console_tab)
-  , printertune_tab(lv_tabview_add_tab(tabview, TUNE_SYMBOL))
-  , setting_tab(lv_tabview_add_tab(tabview, SETTING_SYMBOL))
+  , printertune_tab(lv_tabview_add_tab(tabview, ICON_TUNE))
+  , setting_tab(lv_tabview_add_tab(tabview, ICON_SETTINGS))
   , setting_panel(websocket, lock, setting_tab, sm)
   , main_cont(lv_obj_create(main_tab))
   , print_status_panel(websocket, lock, main_cont)
@@ -46,24 +33,40 @@ MainPanel::MainPanel(KWebSocketClient &websocket,
   , extruder_panel(ws, lock, numpad, sm)
   , prompt_panel(websocket, lock, main_cont)
   , spoolman_panel(sm)
+  , topbar(lv_obj_create(main_cont))
+  , title_label(NULL)
+  , state_chip(NULL)
+  , state_label(NULL)
+  , clock_label(NULL)
+  , clock_timer(NULL)
   , temp_cont(lv_obj_create(main_cont))
-  , temp_chart(lv_chart_create(main_cont))
-  , homing_btn(main_cont, &move, "Homing", &MainPanel::_handle_homing_cb, this)
-  , extrude_btn(main_cont, &filament_img, "Extrude", &MainPanel::_handle_extrude_cb, this)
-  , action_btn(main_cont, &fan, "Fans", &MainPanel::_handle_fanpanel_cb, this)
-  , led_btn(main_cont, &light_img, "LED", &MainPanel::_handle_ledpanel_cb, this)
-  , print_btn(main_cont, &print, "Print", &MainPanel::_handle_print_cb, this)
+  , chart_card(lv_obj_create(main_cont))
+  , temp_chart(lv_chart_create(chart_card))
+  , tiles_cont(lv_obj_create(main_cont))
+  , homing_btn(tiles_cont, ICON_MOVE, "Move", &MainPanel::_handle_homing_cb, this)
+  , extrude_btn(tiles_cont, ICON_NOZZLE, "Extrude", &MainPanel::_handle_extrude_cb, this)
+  , action_btn(tiles_cont, ICON_FAN, "Fans", &MainPanel::_handle_fanpanel_cb, this)
+  , led_btn(tiles_cont, ICON_LIGHT, "LED", &MainPanel::_handle_ledpanel_cb, this)
+  , cooldown_btn(tiles_cont, ICON_COOLDOWN, "Cooldown", &MainPanel::_handle_cooldown_cb, this)
+  , print_btn(tiles_cont, ICON_PRINTER, "Print", &MainPanel::_handle_print_cb, this)
+  , print_active(false)
 {
     lv_style_init(&style);
-    lv_style_set_img_recolor_opa(&style, LV_OPA_30);
-    lv_style_set_img_recolor(&style, lv_color_black());
-    lv_style_set_border_width(&style, 0);
-    lv_style_set_bg_color(&style, lv_palette_darken(LV_PALETTE_GREY, 4));
 
-    ws.register_notify_update(this);    
+    print_status_panel.get_mini_status().set_listener(
+      [this](bool active, int progress, const std::string &status) {
+	update_print_state(active, progress, status);
+      });
+
+    ws.register_notify_update(this);
 }
 
 MainPanel::~MainPanel() {
+  if (clock_timer != NULL) {
+    lv_timer_del(clock_timer);
+    clock_timer = NULL;
+  }
+
   if (tabview != NULL) {
     lv_obj_del(tabview);
     tabview = NULL;
@@ -80,6 +83,24 @@ void MainPanel::subscribe() {
 
 PrinterTunePanel& MainPanel::get_tune_panel() {
   return printertune_panel;
+}
+
+static const char *state_text(const std::string &s) {
+  if (s == "printing") return "Printing";
+  if (s == "paused") return "Paused";
+  if (s == "error") return "Error";
+  if (s == "complete") return "Done";
+  return "Ready";
+}
+
+static void style_state_chip(lv_obj_t *chip, lv_obj_t *label, const std::string &s) {
+  lv_color_t c = s == "paused" ? ui::warn() : (s == "error" ? ui::danger() : ui::accent());
+  lv_obj_set_style_bg_color(chip, c, 0);
+  lv_obj_set_style_bg_opa(chip, 40, 0);
+  lv_obj_set_style_border_color(chip, c, 0);
+  lv_obj_set_style_border_opa(chip, 90, 0);
+  lv_obj_set_style_text_color(label, c, 0);
+  lv_label_set_text(label, fmt::format(LV_SYMBOL_BULLET " {}", state_text(s)).c_str());
 }
 
 void MainPanel::init(json &j) {
@@ -99,6 +120,11 @@ void MainPanel::init(json &j) {
     }
   }
 
+  auto pstate = j["/result/status/print_stats/state"_json_pointer];
+  if (!pstate.is_null()) {
+    style_state_chip(state_chip, state_label, pstate.template get<std::string>());
+  }
+
   macros_panel.populate();
 
   auto fans = State::get_instance()->get_display_fans();
@@ -106,7 +132,7 @@ void MainPanel::init(json &j) {
   printertune_panel.init(j);
 }
 
-void MainPanel::consume(json &j) {  
+void MainPanel::consume(json &j) {
   std::lock_guard<std::mutex> lock(lv_lock);
   for (const auto &el : sensors) {
     auto target_value = j[json::json_pointer(fmt::format("/params/0/{}/target", el.first))];
@@ -121,7 +147,12 @@ void MainPanel::consume(json &j) {
       el.second->update_series(value);
       el.second->update_value(value);
     }
-  }  
+  }
+
+  auto pstate = j["/params/0/print_stats/state"_json_pointer];
+  if (!pstate.is_null()) {
+    style_state_chip(state_chip, state_label, pstate.template get<std::string>());
+  }
 }
 
 static void scroll_begin_event(lv_event_t * e)
@@ -136,14 +167,33 @@ static void scroll_begin_event(lv_event_t * e)
 void MainPanel::create_panel() {
   lv_obj_clear_flag(lv_tabview_get_content(tabview), LV_OBJ_FLAG_SCROLLABLE);
   lv_obj_add_event_cb(lv_tabview_get_content(tabview), scroll_begin_event, LV_EVENT_SCROLL_BEGIN, NULL);
-  
-  lv_obj_t * tab_btns = lv_tabview_get_tab_btns(tabview);
-  lv_obj_set_style_bg_color(tab_btns, lv_palette_main(LV_PALETTE_GREY), LV_STATE_CHECKED | LV_PART_ITEMS);
-  lv_obj_set_style_outline_width(tab_btns, 0, LV_PART_ITEMS | LV_STATE_FOCUS_KEY | LV_STATE_FOCUS_KEY);
-  lv_obj_set_style_border_side(tab_btns, 0, LV_PART_ITEMS | LV_STATE_CHECKED);
-  lv_obj_set_style_text_font(tab_btns, &materialdesign_font_40, LV_STATE_DEFAULT);
 
-  // lv_obj_set_style_text_font(lv_scr_act(), LV_FONT_DEFAULT, 0);
+  // floating glass navigation rail
+  lv_obj_set_style_pad_all(tabview, ui::GAP, 0);
+  lv_obj_set_style_pad_column(tabview, ui::GAP, 0);
+
+  lv_obj_t * tab_btns = lv_tabview_get_tab_btns(tabview);
+  ui::card(tab_btns);
+  lv_obj_set_style_radius(tab_btns, 32, 0);
+  lv_obj_set_style_pad_all(tab_btns, 8, 0);
+  lv_obj_set_style_pad_row(tab_btns, 8, 0);
+  lv_obj_set_style_text_font(tab_btns, &mdi_28, 0);
+  lv_obj_set_style_text_font(tab_btns, &mdi_28, LV_PART_ITEMS);
+  lv_obj_set_style_bg_opa(tab_btns, LV_OPA_TRANSP, LV_PART_ITEMS);
+  lv_obj_set_style_text_color(tab_btns, ui::text2(), LV_PART_ITEMS);
+  lv_obj_set_style_radius(tab_btns, LV_RADIUS_CIRCLE, LV_PART_ITEMS);
+  lv_obj_set_style_border_width(tab_btns, 0, LV_PART_ITEMS | LV_STATE_CHECKED);
+  lv_obj_set_style_outline_width(tab_btns, 0, LV_PART_ITEMS | LV_STATE_FOCUS_KEY);
+  lv_obj_set_style_bg_opa(tab_btns, LV_OPA_COVER, LV_PART_ITEMS | LV_STATE_CHECKED);
+  lv_obj_set_style_bg_opa(tab_btns, LV_OPA_COVER, LV_PART_ITEMS | LV_STATE_PRESSED);
+  auto recolor_rail = [tab_btns]() {
+    lv_obj_set_style_bg_color(tab_btns, ui::accent(), LV_PART_ITEMS | LV_STATE_CHECKED);
+    lv_obj_set_style_text_color(tab_btns, ui::on_accent(), LV_PART_ITEMS | LV_STATE_CHECKED);
+    lv_obj_set_style_bg_color(tab_btns, ui::accent(), LV_PART_ITEMS | LV_STATE_PRESSED);
+    lv_obj_set_style_text_color(tab_btns, ui::on_accent(), LV_PART_ITEMS | LV_STATE_PRESSED);
+  };
+  recolor_rail();
+  ui::on_change(recolor_rail);
 
   lv_obj_set_style_pad_all(main_tab, 0, 0);
   lv_obj_set_style_pad_all(macros_tab, 0, 0);
@@ -152,11 +202,9 @@ void MainPanel::create_panel() {
   lv_obj_set_style_pad_all(setting_tab, 0, 0);
 
   create_main(main_tab);
-  
 }
 
 void MainPanel::handle_homing_cb(lv_event_t *event) {
-  spdlog::trace("clicked homing1");
   if (lv_event_get_code(event) == LV_EVENT_CLICKED) {
     spdlog::trace("clicked homing");
     homing_panel.foreground();
@@ -184,52 +232,145 @@ void MainPanel::handle_ledpanel_cb(lv_event_t *event) {
   }
 }
 
+void MainPanel::handle_cooldown_cb(lv_event_t *event) {
+  if (lv_event_get_code(event) == LV_EVENT_CLICKED) {
+    spdlog::trace("clicked cooldown");
+    Config *conf = Config::get_instance();
+    auto v = conf->get_json(conf->df() + "default_macros/cooldown");
+    if (!v.is_null()) {
+      ws.gcode_script(v.template get<std::string>());
+    }
+  }
+}
+
 void MainPanel::handle_print_cb(lv_event_t *event) {
   if (lv_event_get_code(event) == LV_EVENT_CLICKED) {
     spdlog::trace("clicked print");
-    print_panel.foreground();
+    if (print_active) {
+      print_status_panel.foreground();
+    } else {
+      print_panel.foreground();
+    }
   }
+}
+
+void MainPanel::update_print_state(bool active, int progress, const std::string &status) {
+  print_active = active;
+  print_btn.set_active(active);
+  print_btn.set_progress(active, progress, status == "paused");
+}
+
+void MainPanel::update_clock() {
+  std::time_t now = std::time(nullptr);
+  std::tm tm_now;
+  localtime_r(&now, &tm_now);
+  char buf[8];
+  std::strftime(buf, sizeof(buf), "%H:%M", &tm_now);
+  lv_label_set_text(clock_label, buf);
 }
 
 void MainPanel::create_main(lv_obj_t * parent)
 {
-    lv_obj_set_flex_flow(parent, LV_FLEX_FLOW_ROW_WRAP);
-
-    static lv_coord_t grid_main_row_dsc[] = {LV_GRID_FR(1), LV_GRID_FR(1), LV_GRID_FR(1), LV_GRID_TEMPLATE_LAST};
-    static lv_coord_t grid_main_col_dsc[] = {LV_GRID_FR(1), LV_GRID_FR(1), LV_GRID_FR(1), LV_GRID_FR(1),
-      LV_GRID_TEMPLATE_LAST};
+    static lv_coord_t grid_main_row_dsc[] = {36, 104, LV_GRID_FR(1), LV_GRID_TEMPLATE_LAST};
+    static lv_coord_t grid_main_col_dsc[] = {LV_GRID_FR(1), 336, LV_GRID_TEMPLATE_LAST};
 
     lv_obj_clear_flag(main_cont, LV_OBJ_FLAG_SCROLLABLE);
-    lv_obj_set_height(main_cont, LV_PCT(100));
+    lv_obj_set_size(main_cont, LV_PCT(100), LV_PCT(100));
+    lv_obj_set_style_pad_all(main_cont, 0, 0);
+    lv_obj_set_style_pad_row(main_cont, ui::GAP, 0);
+    lv_obj_set_style_pad_column(main_cont, ui::GAP, 0);
+    lv_obj_set_grid_dsc_array(main_cont, grid_main_col_dsc, grid_main_row_dsc);
 
-    lv_obj_set_flex_grow(main_cont, 1);
-    lv_obj_set_grid_dsc_array(main_cont, grid_main_col_dsc, grid_main_row_dsc);    
+    // top bar: printer name, state chip, clock
+    ui::clear(topbar);
+    lv_obj_clear_flag(topbar, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_set_style_pad_hor(topbar, 4, 0);
+    lv_obj_set_flex_flow(topbar, LV_FLEX_FLOW_ROW);
+    lv_obj_set_flex_align(topbar, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+    lv_obj_set_style_pad_column(topbar, 10, 0);
+    lv_obj_set_grid_cell(topbar, LV_GRID_ALIGN_STRETCH, 0, 2, LV_GRID_ALIGN_STRETCH, 0, 1);
 
-    lv_obj_set_grid_cell(homing_btn.get_container(), LV_GRID_ALIGN_CENTER, 2, 1, LV_GRID_ALIGN_CENTER, 0, 1);
-    lv_obj_set_grid_cell(extrude_btn.get_container(), LV_GRID_ALIGN_CENTER, 3, 1, LV_GRID_ALIGN_CENTER, 0, 1);
-    lv_obj_set_grid_cell(action_btn.get_container(), LV_GRID_ALIGN_CENTER, 2, 1, LV_GRID_ALIGN_CENTER, 1, 1);
-    lv_obj_set_grid_cell(led_btn.get_container(), LV_GRID_ALIGN_CENTER, 3, 1, LV_GRID_ALIGN_CENTER, 1, 1);
-    lv_obj_set_grid_cell(print_btn.get_container(), LV_GRID_ALIGN_CENTER, 2, 2, LV_GRID_ALIGN_CENTER, 2, 1);
+    Config *conf = Config::get_instance();
+    auto name = conf->get_json(conf->df() + "display_name");
+    title_label = ui::text_label(topbar, name.is_string() ? name.template get<std::string>().c_str() : "K1 Max",
+				 &manrope_20, ui::text());
 
+    state_chip = lv_obj_create(topbar);
+    ui::pill(state_chip);
+    lv_obj_clear_flag(state_chip, LV_OBJ_FLAG_SCROLLABLE | LV_OBJ_FLAG_CLICKABLE);
+    lv_obj_set_size(state_chip, LV_SIZE_CONTENT, 28);
+    lv_obj_set_style_border_width(state_chip, 1, 0);
+    lv_obj_set_style_pad_hor(state_chip, 12, 0);
+    lv_obj_set_style_pad_ver(state_chip, 0, 0);
+    state_label = ui::text_label(state_chip, "", &manrope_14, ui::accent());
+    lv_obj_center(state_label);
+    style_state_chip(state_chip, state_label, "standby");
+    ui::on_change([this]() {
+      auto &s = State::get_instance()->get_data("/printer_state/print_stats/state"_json_pointer);
+      style_state_chip(state_chip, state_label, s.is_string() ? s.template get<std::string>() : "standby");
+    });
+
+    lv_obj_t *spacer = lv_obj_create(topbar);
+    ui::clear(spacer);
+    lv_obj_clear_flag(spacer, LV_OBJ_FLAG_CLICKABLE);
+    lv_obj_set_height(spacer, 1);
+    lv_obj_set_flex_grow(spacer, 1);
+
+    clock_label = ui::text_label(topbar, "--:--", &manrope_20, ui::text());
+    update_clock();
+    clock_timer = lv_timer_create([](lv_timer_t *t) {
+      ((MainPanel *)t->user_data)->update_clock();
+    }, 10000, this);
+
+    // temperature cards
+    ui::clear(temp_cont);
     lv_obj_clear_flag(temp_cont, LV_OBJ_FLAG_SCROLLABLE);
-    lv_obj_set_size(temp_cont, LV_PCT(50), LV_PCT(50));
-    lv_obj_set_style_pad_all(temp_cont, 0, 0);
+    lv_obj_set_flex_flow(temp_cont, LV_FLEX_FLOW_ROW);
+    lv_obj_set_style_pad_column(temp_cont, ui::GAP, 0);
+    lv_obj_set_grid_cell(temp_cont, LV_GRID_ALIGN_STRETCH, 0, 2, LV_GRID_ALIGN_STRETCH, 1, 1);
 
-    lv_obj_set_flex_flow(temp_cont, LV_FLEX_FLOW_ROW_WRAP);
-    lv_obj_set_grid_cell(temp_cont, LV_GRID_ALIGN_START, 0, 2, LV_GRID_ALIGN_CENTER, 0, 2);
-    
-    lv_obj_align(temp_chart, LV_ALIGN_CENTER, 0, 0);
-    lv_obj_set_size(temp_chart, LV_PCT(45), LV_PCT(40));
+    // temperature chart card
+    ui::card(chart_card);
+    lv_obj_clear_flag(chart_card, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_set_style_pad_top(chart_card, 12, 0);
+    lv_obj_set_style_pad_bottom(chart_card, 14, 0);
+    lv_obj_set_style_pad_left(chart_card, 46, 0);
+    lv_obj_set_style_pad_right(chart_card, 16, 0);
+    lv_obj_set_style_pad_row(chart_card, 8, 0);
+    lv_obj_set_flex_flow(chart_card, LV_FLEX_FLOW_COLUMN);
+    lv_obj_set_grid_cell(chart_card, LV_GRID_ALIGN_STRETCH, 0, 1, LV_GRID_ALIGN_STRETCH, 2, 1);
+
+    lv_obj_t *chart_title = ui::text_label(chart_card, "Temperature", &manrope_16, ui::text2());
+    lv_obj_set_style_translate_x(chart_title, -30, 0);
+
+    lv_obj_set_width(temp_chart, LV_PCT(100));
+    lv_obj_set_flex_grow(temp_chart, 1);
+    lv_obj_set_scrollbar_mode(temp_chart, LV_SCROLLBAR_MODE_OFF);
+    lv_obj_set_style_pad_all(temp_chart, 0, 0);
     lv_obj_set_style_size(temp_chart, 0, LV_PART_INDICATOR);
-
+    lv_obj_set_style_line_width(temp_chart, 2, LV_PART_ITEMS);
     lv_chart_set_range(temp_chart, LV_CHART_AXIS_PRIMARY_Y, 0, 300);
-    lv_obj_set_grid_cell(temp_chart, LV_GRID_ALIGN_END, 0, 2, LV_GRID_ALIGN_END, 2, 1);
-    lv_chart_set_axis_tick(temp_chart, LV_CHART_AXIS_PRIMARY_Y, 0, 0, 6, 5, true, 50);
-
-    lv_chart_set_div_line_count(temp_chart, 3, 8);
+    lv_chart_set_axis_tick(temp_chart, LV_CHART_AXIS_PRIMARY_Y, 0, 0, 4, 1, true, 40);
+    lv_chart_set_div_line_count(temp_chart, 4, 0);
     lv_chart_set_point_count(temp_chart, 5000);
     lv_chart_set_zoom_x(temp_chart, 5000);
     lv_obj_scroll_to_x(temp_chart, LV_COORD_MAX, LV_ANIM_OFF);
+
+    // action tiles
+    static lv_coord_t grid_tiles_col_dsc[] = {LV_GRID_FR(1), LV_GRID_FR(1), LV_GRID_FR(1), LV_GRID_TEMPLATE_LAST};
+    static lv_coord_t grid_tiles_row_dsc[] = {LV_GRID_FR(1), LV_GRID_FR(1), LV_GRID_TEMPLATE_LAST};
+    ui::clear(tiles_cont);
+    lv_obj_clear_flag(tiles_cont, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_set_style_pad_row(tiles_cont, ui::GAP, 0);
+    lv_obj_set_style_pad_column(tiles_cont, ui::GAP, 0);
+    lv_obj_set_grid_dsc_array(tiles_cont, grid_tiles_col_dsc, grid_tiles_row_dsc);
+    lv_obj_set_grid_cell(tiles_cont, LV_GRID_ALIGN_STRETCH, 1, 1, LV_GRID_ALIGN_STRETCH, 2, 1);
+
+    Tile *tiles[] = {&homing_btn, &extrude_btn, &action_btn, &led_btn, &cooldown_btn, &print_btn};
+    for (int i = 0; i < 6; i++) {
+      lv_obj_set_grid_cell(tiles[i]->get_container(), LV_GRID_ALIGN_STRETCH, i % 3, 1,
+			   LV_GRID_ALIGN_STRETCH, i / 3, 1);
+    }
 }
 
 void MainPanel::create_sensors(json &temp_sensors) {
@@ -238,36 +379,28 @@ void MainPanel::create_sensors(json &temp_sensors) {
   for (auto &sensor : temp_sensors.items()) {
     std::string key = sensor.key();
     bool controllable = sensor.value()["controllable"].template get<bool>();
-
-    lv_color_t color_code = lv_palette_main(LV_PALETTE_ORANGE);
-    if (!sensor.value()["color"].is_number()) {
-      std::string color = sensor.value()["color"].template get<std::string>();
-      if (color == "red") {
-	color_code = lv_palette_main(LV_PALETTE_RED);
-      } else if (color == "purple") {
-	color_code = lv_palette_main(LV_PALETTE_PURPLE);
-      } else if (color == "blue") {
-	color_code = lv_palette_main(LV_PALETTE_BLUE);	
-      }
-    } else {
-      color_code = lv_palette_main((lv_palette_t)sensor.value()["color"].template get<int>());
-    }
-
     std::string display_name = sensor.value()["display_name"].template get<std::string>();
 
-    const void* sensor_img = &heater;
+    const char *icon = ICON_CHAMBER;
+    bool use_accent = false;
+    lv_color_t color = ui::chamber();
     if (key == "extruder") {
-      sensor_img = &extruder;
+      icon = ICON_NOZZLE_HEAT;
+      use_accent = true;
+      color = ui::accent();
     } else if (key == "heater_bed") {
-      sensor_img = &bed;
+      icon = ICON_BED;
+      color = ui::bed();
     }
 
     lv_chart_series_t *temp_series =
-      lv_chart_add_series(temp_chart, color_code, LV_CHART_AXIS_PRIMARY_Y);
+      lv_chart_add_series(temp_chart, color, LV_CHART_AXIS_PRIMARY_Y);
 
-    sensors.insert({key, std::make_shared<SensorContainer>(ws, temp_cont, sensor_img, 150,
-			   display_name.c_str(), color_code, controllable, false, numpad, key,
-        		   temp_chart, temp_series)});
+    auto card = std::make_shared<TempCard>(ws, temp_cont, icon, display_name.c_str(), use_accent, color,
+					   controllable, numpad, key, temp_chart, temp_series);
+    lv_obj_set_flex_grow(card->get_container(), 1);
+    lv_obj_set_height(card->get_container(), LV_PCT(100));
+    sensors.insert({key, card});
   }
 }
 

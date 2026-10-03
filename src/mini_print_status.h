@@ -3,6 +3,7 @@
 
 #include "lvgl/lvgl.h"
 #include <string>
+#include <functional>
 
 class MiniPrintStatus {
  public:
@@ -22,7 +23,15 @@ class MiniPrintStatus {
   void update_img(const std::string &img_path, size_t twidth);
   void reset();
 
+  // The glass UI shows print progress on the home Print tile instead of
+  // this floating widget; the listener receives (active, progress, status).
+  void set_listener(std::function<void(bool, int, const std::string &)> cb);
+
  private:
+  void notify();
+  std::function<void(bool, int, const std::string &)> listener;
+  bool active;
+  int progress;
   lv_obj_t *cont;
   lv_obj_t *progress_bar;  
   lv_obj_t *thumb;

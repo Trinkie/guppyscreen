@@ -40,6 +40,7 @@ include $(LVGL_DIR)/lvgl/lvgl.mk
 include $(LVGL_DIR)/lv_drivers/lv_drivers.mk
 
 CSRCS 			+= $(wildcard $(LVGL_DIR)/assets/*.c)
+CSRCS 			+= $(wildcard $(LVGL_DIR)/assets/fonts/*.c)
 CSRCS			+= $(wildcard $(LVGL_DIR)/lv_touch_calibration/*.c)
 
 ASSET_DIR		= material

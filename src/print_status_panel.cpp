@@ -535,3 +535,7 @@ int PrintStatusPanel::current_layer(json &info) {
 FineTunePanel &PrintStatusPanel::get_finetune_panel() {
   return finetune_panel;
 }
+
+MiniPrintStatus &PrintStatusPanel::get_mini_status() {
+  return mini_print_status;
+}

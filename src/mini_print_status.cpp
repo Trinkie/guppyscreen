@@ -10,6 +10,8 @@ MiniPrintStatus::MiniPrintStatus(lv_obj_t *parent,
   , status_label(lv_label_create(cont))
   , status("n/a")
   , eta("...")
+  , active(false)
+  , progress(0)
 {
   lv_obj_add_flag(cont, LV_OBJ_FLAG_HIDDEN);
   lv_color_t cur_bg = lv_obj_get_style_bg_color(cont, 0);
@@ -62,13 +64,27 @@ MiniPrintStatus::~MiniPrintStatus() {
 
 
 void MiniPrintStatus::show() {
-  lv_obj_clear_flag(cont, LV_OBJ_FLAG_HIDDEN);
-  lv_obj_move_foreground(cont);
+  // the floating widget stays hidden, the home Print tile shows progress
+  active = true;
+  notify();
 }
 
 void MiniPrintStatus::hide() {
   lv_obj_add_flag(cont, LV_OBJ_FLAG_HIDDEN);
   lv_obj_move_background(cont);
+  active = false;
+  notify();
+}
+
+void MiniPrintStatus::set_listener(std::function<void(bool, int, const std::string &)> cb) {
+  listener = cb;
+  notify();
+}
+
+void MiniPrintStatus::notify() {
+  if (listener) {
+    listener(active, progress, status);
+  }
 }
 
 lv_obj_t *MiniPrintStatus::get_container() {
@@ -83,10 +99,15 @@ void MiniPrintStatus::update_eta(std::string &eta_str) {
 void MiniPrintStatus::update_status(std::string &status_str) {
   status = status_str;
   lv_label_set_text(status_label, fmt::format("ETA: {}\nStatus: {}", eta, status).c_str());
+  notify();
 }
 
 void MiniPrintStatus::update_progress(int p) {
   lv_arc_set_value(progress_bar, p);
+  if (p != progress) {
+    progress = p;
+    notify();
+  }
 }
 
 void MiniPrintStatus::update_img(const std::string &img_path, size_t twidth) {
@@ -98,6 +119,7 @@ void MiniPrintStatus::update_img(const std::string &img_path, size_t twidth) {
 
 void MiniPrintStatus::reset() {
   lv_arc_set_value(progress_bar, 0);
+  progress = 0;
 
   // free src
   lv_img_set_src(thumb, NULL);

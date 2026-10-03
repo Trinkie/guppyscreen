@@ -4,6 +4,7 @@
 #include "websocket_client.h"
 #include "notify_consumer.h"
 #include "sensor_container.h"
+#include "ui_widgets.h"
 #include "button_container.h"
 #include "prompt_panel.h"
 #include "numpad.h"
@@ -46,6 +47,7 @@ class MainPanel : public NotifyConsumer {
   void handle_fanpanel_cb(lv_event_t *event);
   void handle_ledpanel_cb(lv_event_t *event);
   void handle_print_cb(lv_event_t *event);
+  void handle_cooldown_cb(lv_event_t *event);
 
   lv_obj_t *create_button(lv_obj_t *parent,
 			  const void *btn_img,
@@ -82,8 +84,15 @@ class MainPanel : public NotifyConsumer {
     panel->handle_print_cb(event);
   };
 
+  static void _handle_cooldown_cb(lv_event_t *event) {
+    MainPanel *panel = (MainPanel*)event->user_data;
+    panel->handle_cooldown_cb(event);
+  };
+
  private:
   void create_main(lv_obj_t *parent);
+  void update_print_state(bool active, int progress, const std::string &status);
+  void update_clock();
   KWebSocketClient &ws;
   HomingPanel homing_panel;
   FanPanel fan_panel;
@@ -108,15 +117,26 @@ class MainPanel : public NotifyConsumer {
   
   lv_style_t style;
 
+  lv_obj_t *topbar;
+  lv_obj_t *title_label;
+  lv_obj_t *state_chip;
+  lv_obj_t *state_label;
+  lv_obj_t *clock_label;
+  lv_timer_t *clock_timer;
+
   lv_obj_t *temp_cont;
+  lv_obj_t *chart_card;
   lv_obj_t *temp_chart;
 
-  std::map<std::string, std::shared_ptr<SensorContainer>> sensors;
-  
-  ButtonContainer homing_btn;
-  ButtonContainer extrude_btn;
-  ButtonContainer action_btn;
-  ButtonContainer led_btn;
-  ButtonContainer print_btn;
+  std::map<std::string, std::shared_ptr<TempCard>> sensors;
+
+  lv_obj_t *tiles_cont;
+  Tile homing_btn;
+  Tile extrude_btn;
+  Tile action_btn;
+  Tile led_btn;
+  Tile cooldown_btn;
+  Tile print_btn;
+  bool print_active;
 };
 #endif // __MAIN_PANEL_H__

@@ -1,5 +1,6 @@
 #include "numpad.h"
 #include "spdlog/spdlog.h"
+#include "ui_style.h"
 
 #include <string>
 
@@ -22,7 +23,11 @@ Numpad::Numpad(lv_obj_t *parent)
   lv_obj_align(edit_cont, LV_ALIGN_RIGHT_MID, 0, 0);
 
   lv_obj_set_flex_flow(edit_cont, LV_FLEX_FLOW_COLUMN);
-  lv_obj_set_style_pad_all(edit_cont, 0, 0);
+  // floating opaque card over the right half of the home screen
+  lv_obj_add_flag(edit_cont, LV_OBJ_FLAG_FLOATING);
+  ui::card_solid(edit_cont);
+  lv_obj_set_style_pad_all(edit_cont, 12, 0);
+  lv_obj_set_style_pad_row(edit_cont, 8, 0);
 
   lv_obj_set_size(input, LV_PCT(100), LV_SIZE_CONTENT);
   lv_textarea_set_one_line(input, true);

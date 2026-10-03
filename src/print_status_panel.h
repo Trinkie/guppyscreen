@@ -41,6 +41,7 @@ class PrintStatusPanel : public NotifyConsumer {
   int current_layer(json &info);
 
   FineTunePanel &get_finetune_panel();
+  MiniPrintStatus &get_mini_status();
 
  private:
   KWebSocketClient &ws;
