@@ -1,5 +1,6 @@
 #include "sensor_container.h"
 #include "spdlog/spdlog.h"
+#include "ui_style.h"
 
 #include <string>
 
@@ -30,9 +31,9 @@ SensorContainer::SensorContainer(KWebSocketClient &c,
   , last_updated_ts(std::time(nullptr))
 {
     lv_obj_clear_flag(sensor_cont, LV_OBJ_FLAG_SCROLLABLE);
-    lv_obj_set_style_border_color(sensor_cont, color, LV_PART_MAIN);
-    lv_obj_set_style_border_side(sensor_cont, LV_BORDER_SIDE_LEFT, LV_PART_MAIN);
-    lv_obj_set_style_border_width(sensor_cont, 5, LV_PART_MAIN);
+    // glass card with the sensor color on the icon
+    ui::card(sensor_cont);
+    lv_obj_set_style_radius(sensor_cont, 16, LV_PART_MAIN);
 
     // auto cont_width = (double)lv_disp_get_physical_hor_res(NULL) * 0.4125;
     // cont_width = cont_width > 330 ? 330 : cont_width;
@@ -46,6 +47,8 @@ SensorContainer::SensorContainer(KWebSocketClient &c,
 
     lv_img_set_src(sensor_img, img);
     lv_obj_align(sensor_img, LV_ALIGN_LEFT_MID, 0, 0);
+    lv_obj_set_style_img_recolor(sensor_img, color, 0);
+    lv_obj_set_style_img_recolor_opa(sensor_img, LV_OPA_COVER, 0);
 
     lv_label_set_text(sensor_label, text);
     lv_obj_align_to(sensor_label, sensor_img, LV_ALIGN_OUT_RIGHT_MID, -7 * width_scale, 0);
@@ -71,9 +74,10 @@ SensorContainer::SensorContainer(KWebSocketClient &c,
     }
 
     if (can_edit) {      
-      lv_obj_set_style_border_width(target_label, 2, LV_PART_MAIN);
-      lv_obj_set_style_radius(target_label, 6, LV_PART_MAIN);
-      lv_obj_set_style_border_color(target_label, lv_palette_darken(LV_PALETTE_GREY, 1), LV_PART_MAIN);
+      ui::pill(target_label);
+      lv_obj_set_style_bg_opa(target_label, 40, LV_PART_MAIN);
+      lv_obj_set_style_bg_color(target_label, lv_color_white(), LV_PART_MAIN);
+      lv_obj_set_style_text_align(target_label, LV_TEXT_ALIGN_CENTER, 0);
 
       spdlog::debug("sensor cb registered name {}, cont {}, this {}, np {}",
 		    id, fmt::ptr(sensor_cont), fmt::ptr(this), fmt::ptr(&np));

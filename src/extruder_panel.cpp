@@ -2,6 +2,7 @@
 #include "state.h"
 #include "config.h"
 #include "spdlog/spdlog.h"
+#include "ui_style.h"
 
 #include <limits>
 
@@ -65,57 +66,55 @@ ExtruderPanel::ExtruderPanel(KWebSocketClient &websocket_client,
   lv_obj_move_background(panel_cont);
   lv_obj_clear_flag(panel_cont, LV_OBJ_FLAG_SCROLLABLE);  
   lv_obj_set_size(panel_cont, LV_PCT(100), LV_PCT(100));
-  lv_obj_set_style_pad_all(panel_cont, 0, 0);
 
-  lv_obj_set_size(rightside_btns_cont, LV_PCT(20), LV_PCT(100));  
-  lv_obj_set_flex_flow(rightside_btns_cont, LV_FLEX_FLOW_COLUMN);
-  lv_obj_set_flex_align(rightside_btns_cont, LV_FLEX_ALIGN_SPACE_EVENLY, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
-  lv_obj_clear_flag(rightside_btns_cont, LV_OBJ_FLAG_SCROLLABLE);
+  lv_obj_set_parent(back_btn.get_container(), panel_cont);
+  back_btn.make_pill(ICON_BACK, ButtonContainer::PILL_GLASS, true);
+  ui::panel_header(panel_cont, back_btn.get_container(), "Extrude");
 
-  lv_obj_set_size(leftside_btns_cont, LV_PCT(20), LV_SIZE_CONTENT);
-  lv_obj_set_style_pad_row(leftside_btns_cont, 15, 0);
-  lv_obj_set_flex_flow(leftside_btns_cont, LV_FLEX_FLOW_COLUMN);
-  lv_obj_set_flex_align(leftside_btns_cont, LV_FLEX_ALIGN_SPACE_EVENLY, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
-  lv_obj_clear_flag(leftside_btns_cont, LV_OBJ_FLAG_SCROLLABLE);
-  
-  spoolman_btn.disable();  
-
-  static lv_coord_t grid_main_row_dsc[] = {LV_GRID_FR(3), LV_GRID_FR(6), LV_GRID_FR(6), LV_GRID_FR(6),
-    LV_GRID_TEMPLATE_LAST};
-  static lv_coord_t grid_main_col_dsc[] = {LV_GRID_FR(2), LV_GRID_FR(7), LV_GRID_FR(2), LV_GRID_TEMPLATE_LAST};
-  
-  lv_obj_clear_flag(panel_cont, LV_OBJ_FLAG_SCROLLABLE);
-  
+  // [ temperature + selectors | actions ]
+  static lv_coord_t grid_main_row_dsc[] = {LV_GRID_FR(1), LV_GRID_TEMPLATE_LAST};
+  static lv_coord_t grid_main_col_dsc[] = {LV_GRID_FR(1), 220, LV_GRID_TEMPLATE_LAST};
   lv_obj_set_grid_dsc_array(panel_cont, grid_main_col_dsc, grid_main_row_dsc);
-  lv_obj_add_flag(extruder_temp.get_sensor(), LV_OBJ_FLAG_FLOATING);
-  lv_obj_align(extruder_temp.get_sensor(), LV_ALIGN_TOP_LEFT, 50, 0);
+  lv_obj_set_style_pad_column(panel_cont, ui::GAP, 0);
 
-  // lv_obj_set_size(extruder_temp.get_sensor(), 350, 60);
-  // col 0
-  // lv_obj_set_grid_cell(spoolman_btn.get_container(), LV_GRID_ALIGN_CENTER, 0, 1, LV_GRID_ALIGN_START, 0, 2);
-  // lv_obj_set_grid_cell(load_btn.get_container(), LV_GRID_ALIGN_CENTER, 0, 1, LV_GRID_ALIGN_END, 0, 2);
-  // lv_obj_set_grid_cell(unload_btn.get_container(), LV_GRID_ALIGN_CENTER, 0, 1, LV_GRID_ALIGN_START, 2, 2);
-  // lv_obj_set_grid_cell(cooldown_btn.get_container(), LV_GRID_ALIGN_END, 0, 1, LV_GRID_ALIGN_END, 2, 2);
+  ui::clear(leftside_btns_cont);
+  lv_obj_clear_flag(leftside_btns_cont, LV_OBJ_FLAG_SCROLLABLE);
+  lv_obj_set_flex_flow(leftside_btns_cont, LV_FLEX_FLOW_COLUMN);
+  lv_obj_set_flex_align(leftside_btns_cont, LV_FLEX_ALIGN_SPACE_BETWEEN, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_START);
+  lv_obj_set_grid_cell(leftside_btns_cont, LV_GRID_ALIGN_STRETCH, 0, 1, LV_GRID_ALIGN_STRETCH, 0, 1);
 
-  lv_obj_set_grid_cell(leftside_btns_cont, LV_GRID_ALIGN_CENTER, 0, 1, LV_GRID_ALIGN_CENTER, 1, 3);
-  
-  // col 1
-  // lv_obj_set_grid_cell(extruder_temp.get_sensor(), LV_GRID_ALIGN_CENTER, 0, 2, LV_GRID_ALIGN_CENTER, 0, 1);
-  lv_obj_set_grid_cell(speed_selector.get_container(), LV_GRID_ALIGN_CENTER, 1, 1, LV_GRID_ALIGN_CENTER, 1, 1);
-  lv_obj_set_grid_cell(length_selector.get_container(), LV_GRID_ALIGN_CENTER, 1, 1, LV_GRID_ALIGN_CENTER, 2, 1);
-  lv_obj_set_grid_cell(temp_selector.get_container(), LV_GRID_ALIGN_CENTER, 1, 1, LV_GRID_ALIGN_CENTER, 3, 1);
-  
-  // col 2
-  // lv_obj_set_grid_cell(spoolman_btn.get_container(), LV_GRID_ALIGN_CENTER, 2, 1, LV_GRID_ALIGN_START, 0, 2);
-  // lv_obj_set_grid_cell(retract_btn.get_container(), LV_GRID_ALIGN_CENTER, 2, 1, LV_GRID_ALIGN_END, 0, 2);
-  // lv_obj_set_grid_cell(extrude_btn.get_container(), LV_GRID_ALIGN_CENTER, 2, 1, LV_GRID_ALIGN_START, 2, 2);
-  // lv_obj_set_grid_cell(back_btn.get_container(), LV_GRID_ALIGN_END, 2, 1, LV_GRID_ALIGN_END, 2, 2);
+  lv_obj_set_parent(extruder_temp.get_sensor(), leftside_btns_cont);
+  lv_obj_set_width(extruder_temp.get_sensor(), LV_PCT(100));
+  for (Selector *sel : {&temp_selector, &length_selector, &speed_selector}) {
+    lv_obj_set_parent(sel->get_container(), leftside_btns_cont);
+    lv_obj_set_width(sel->get_container(), LV_PCT(100));
+  }
 
-  lv_obj_set_grid_cell(rightside_btns_cont, LV_GRID_ALIGN_CENTER, 2, 1, LV_GRID_ALIGN_START, 0, 4);
-  // lv_obj_set_grid_cell(retract_btn.get_container(), LV_GRID_ALIGN_CENTER, 2, 1, LV_GRID_ALIGN_END, 0, 2);
-  // lv_obj_set_grid_cell(extrude_btn.get_container(), LV_GRID_ALIGN_CENTER, 2, 1, LV_GRID_ALIGN_START, 2, 2);
-  // lv_obj_set_grid_cell(back_btn.get_container(), LV_GRID_ALIGN_END, 2, 1, LV_GRID_ALIGN_END, 2, 2);
-  
+  ui::card(rightside_btns_cont);
+  lv_obj_clear_flag(rightside_btns_cont, LV_OBJ_FLAG_SCROLLABLE);
+  lv_obj_set_style_pad_all(rightside_btns_cont, 10, 0);
+  lv_obj_set_style_pad_row(rightside_btns_cont, 8, 0);
+  lv_obj_set_flex_flow(rightside_btns_cont, LV_FLEX_FLOW_COLUMN);
+  lv_obj_set_flex_align(rightside_btns_cont, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+  lv_obj_set_grid_cell(rightside_btns_cont, LV_GRID_ALIGN_STRETCH, 1, 1, LV_GRID_ALIGN_STRETCH, 0, 1);
+
+  struct { ButtonContainer *b; const char *icon; ButtonContainer::PillVariant v; } actions[] = {
+    {&extrude_btn, ICON_EXTRUDE, ButtonContainer::PILL_ACCENT},
+    {&retract_btn, ICON_RETRACT, ButtonContainer::PILL_GLASS},
+    {&load_btn, ICON_ARROW_DOWN, ButtonContainer::PILL_GLASS},
+    {&unload_btn, ICON_ARROW_UP, ButtonContainer::PILL_GLASS},
+    {&cooldown_btn, ICON_COOLDOWN, ButtonContainer::PILL_GLASS},
+    {&spoolman_btn, ICON_LIST, ButtonContainer::PILL_GLASS},
+  };
+  for (auto &act : actions) {
+    lv_obj_set_parent(act.b->get_container(), rightside_btns_cont);
+    act.b->make_pill(act.icon, act.v);
+    lv_obj_set_size(act.b->get_container(), LV_PCT(100), 52);
+    lv_obj_set_flex_align(act.b->get_container(), LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+  }
+
+  spoolman_btn.disable();
+  lv_obj_add_flag(spoolman_btn.get_container(), LV_OBJ_FLAG_HIDDEN);
 
   ws.register_notify_update(this);    
 }
@@ -133,6 +132,7 @@ void ExtruderPanel::foreground() {
 
 void ExtruderPanel::enable_spoolman() {
   spoolman_btn.enable();
+  lv_obj_clear_flag(spoolman_btn.get_container(), LV_OBJ_FLAG_HIDDEN);
 }
 
 void ExtruderPanel::consume(json& j) {

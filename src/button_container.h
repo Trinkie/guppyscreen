@@ -30,6 +30,8 @@ class ButtonContainer {
   // an empty text makes a round icon-only button
   // icon may be NULL (text only); icon_only hides the text and makes a round button
   void make_pill(const char *icon, PillVariant variant, bool icon_only = false);
+  // changes the icon glyph of a pill button
+  void set_icon(const char *icon);
 
   void handle_callback(lv_event_t *event);
 

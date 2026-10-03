@@ -1,5 +1,6 @@
 #include "selector.h"
 #include "spdlog/spdlog.h"
+#include "ui_style.h"
 
 #include <limits>
 
@@ -26,13 +27,25 @@ Selector::Selector(lv_obj_t *parent,
 
   auto height = (double)lv_disp_get_physical_ver_res(NULL) * (height_pct / 100.0);
   height = height < 50 ? 50 : height;
+  // caption above a segmented capsule
+  height = height > 56 ? 56 : height;
   lv_obj_set_size(btnm, LV_PCT(100), height);
   lv_label_set_text(label, label_text);  
   lv_obj_set_width(label, LV_PCT(100));  
-  lv_obj_set_style_text_align(label, LV_TEXT_ALIGN_CENTER, 0);
+  lv_obj_set_style_text_align(label, LV_TEXT_ALIGN_LEFT, 0);
+  lv_obj_set_style_text_font(label, &manrope_16, 0);
+  lv_obj_set_style_text_color(label, ui::text2(), 0);
+  lv_obj_set_style_pad_left(label, 8, 0);
+  lv_obj_set_style_pad_bottom(label, 6, 0);
   
   lv_btnmatrix_set_map(btnm, &map[0]);
+  ui::card(btnm);
+  lv_obj_set_style_radius(btnm, LV_RADIUS_CIRCLE, LV_PART_MAIN);
   lv_obj_set_style_pad_all(btnm, 4, LV_PART_MAIN);
+  lv_obj_set_style_pad_gap(btnm, 4, LV_PART_MAIN);
+  lv_obj_set_style_radius(btnm, LV_RADIUS_CIRCLE, LV_PART_ITEMS);
+  lv_obj_set_style_bg_opa(btnm, LV_OPA_TRANSP, LV_PART_ITEMS);
+  lv_obj_set_style_text_font(btnm, &manrope_16, LV_PART_ITEMS);
 
   lv_obj_set_style_outline_width(btnm, 0, LV_PART_ITEMS | LV_STATE_FOCUS_KEY);
     

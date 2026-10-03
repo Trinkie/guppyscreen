@@ -2,6 +2,7 @@
 #include "state.h"
 #include "spdlog/spdlog.h"
 #include "config.h"
+#include "ui_style.h"
 
 static const float distances[] = {0.1, 0.5, 1, 5, 10, 25, 50};
 
@@ -43,30 +44,74 @@ HomingPanel::HomingPanel(KWebSocketClient &websocket_client, std::mutex &lock)
   lv_obj_set_height(homing_cont, lv_pct(100));
   lv_obj_set_width(homing_cont, lv_pct(100));
 
-  static lv_coord_t grid_main_row_dsc[] = {LV_GRID_FR(4), LV_GRID_FR(4), LV_GRID_FR(2), LV_GRID_TEMPLATE_LAST};
-  static lv_coord_t grid_main_col_dsc[] = {LV_GRID_FR(1), LV_GRID_FR(1), LV_GRID_FR(1), LV_GRID_FR(1),
-    LV_GRID_FR(1), LV_GRID_TEMPLATE_LAST};
+  back_btn.make_pill(ICON_BACK, ButtonContainer::PILL_GLASS, true);
+  ui::panel_header(homing_cont, back_btn.get_container(), "Move");
 
+  // [ XY pad | Z | actions ]
+  // [ distance selector    ]
+  static lv_coord_t grid_main_row_dsc[] = {LV_GRID_FR(1), LV_GRID_CONTENT, LV_GRID_TEMPLATE_LAST};
+  static lv_coord_t grid_main_col_dsc[] = {LV_GRID_FR(5), LV_GRID_FR(2), LV_GRID_FR(3), LV_GRID_TEMPLATE_LAST};
   lv_obj_set_grid_dsc_array(homing_cont, grid_main_col_dsc, grid_main_row_dsc);
+  lv_obj_set_style_pad_row(homing_cont, ui::GAP, 0);
+  lv_obj_set_style_pad_column(homing_cont, ui::GAP, 0);
 
-  // row 1
-  lv_obj_set_grid_cell(home_all_btn.get_container(), LV_GRID_ALIGN_CENTER, 0, 1, LV_GRID_ALIGN_CENTER, 0, 1);
+  auto make_card = [this](int col) {
+    lv_obj_t *c = lv_obj_create(homing_cont);
+    ui::card(c);
+    lv_obj_clear_flag(c, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_set_style_pad_all(c, 12, 0);
+    lv_obj_set_grid_cell(c, LV_GRID_ALIGN_STRETCH, col, 1, LV_GRID_ALIGN_STRETCH, 0, 1);
+    return c;
+  };
+
+  auto round_btn = [](ButtonContainer &b, lv_obj_t *parent, const char *icon, ButtonContainer::PillVariant v) {
+    lv_obj_set_parent(b.get_container(), parent);
+    b.make_pill(icon, v, true);
+    lv_obj_set_size(b.get_container(), 72, 72);
+    lv_obj_set_style_text_font(b.get_container(), &mdi_28, 0);
+  };
+
+  // XY pad
+  lv_obj_t *xy = make_card(0);
+  static lv_coord_t grid_xy_dsc[] = {LV_GRID_FR(1), LV_GRID_FR(1), LV_GRID_FR(1), LV_GRID_TEMPLATE_LAST};
+  lv_obj_set_grid_dsc_array(xy, grid_xy_dsc, grid_xy_dsc);
+  round_btn(y_up_btn, xy, ICON_ARROW_UP, ButtonContainer::PILL_GLASS);
+  round_btn(x_down_btn, xy, ICON_ARROW_LEFT, ButtonContainer::PILL_GLASS);
+  round_btn(home_xy_btn, xy, ICON_HOME, ButtonContainer::PILL_ACCENT);
+  round_btn(x_up_btn, xy, ICON_ARROW_RIGHT, ButtonContainer::PILL_GLASS);
+  round_btn(y_down_btn, xy, ICON_ARROW_DOWN, ButtonContainer::PILL_GLASS);
   lv_obj_set_grid_cell(y_up_btn.get_container(), LV_GRID_ALIGN_CENTER, 1, 1, LV_GRID_ALIGN_CENTER, 0, 1);
-  lv_obj_set_grid_cell(home_xy_btn.get_container(), LV_GRID_ALIGN_CENTER, 2, 1, LV_GRID_ALIGN_CENTER, 0, 1);
-  lv_obj_set_grid_cell(z_up_btn.get_container(), LV_GRID_ALIGN_CENTER, 3, 1, LV_GRID_ALIGN_CENTER, 0, 1); 
-  lv_obj_set_grid_cell(emergency_btn.get_container(), LV_GRID_ALIGN_CENTER, 4, 1, LV_GRID_ALIGN_CENTER, 0, 1);
-
-  // row 2
   lv_obj_set_grid_cell(x_down_btn.get_container(), LV_GRID_ALIGN_CENTER, 0, 1, LV_GRID_ALIGN_CENTER, 1, 1);
-  lv_obj_set_grid_cell(y_down_btn.get_container(), LV_GRID_ALIGN_CENTER, 1, 1, LV_GRID_ALIGN_CENTER, 1, 1);
+  lv_obj_set_grid_cell(home_xy_btn.get_container(), LV_GRID_ALIGN_CENTER, 1, 1, LV_GRID_ALIGN_CENTER, 1, 1);
   lv_obj_set_grid_cell(x_up_btn.get_container(), LV_GRID_ALIGN_CENTER, 2, 1, LV_GRID_ALIGN_CENTER, 1, 1);
-  lv_obj_set_grid_cell(z_down_btn.get_container(), LV_GRID_ALIGN_CENTER, 3, 1, LV_GRID_ALIGN_CENTER, 1, 1);
-  lv_obj_set_grid_cell(motoroff_btn.get_container(), LV_GRID_ALIGN_CENTER, 4, 1, LV_GRID_ALIGN_CENTER, 1, 1);
-    
-  lv_obj_set_grid_cell(distance_selector.get_container(), LV_GRID_ALIGN_CENTER, 0, 5, LV_GRID_ALIGN_CENTER, 2, 1);
+  lv_obj_set_grid_cell(y_down_btn.get_container(), LV_GRID_ALIGN_CENTER, 1, 1, LV_GRID_ALIGN_CENTER, 2, 1);
+  lv_obj_t *xy_caption = ui::text_label(xy, "XY", &manrope_16, ui::text3());
+  lv_obj_set_grid_cell(xy_caption, LV_GRID_ALIGN_START, 0, 1, LV_GRID_ALIGN_START, 0, 1);
 
-  lv_obj_add_flag(back_btn.get_container(), LV_OBJ_FLAG_FLOATING);  
-  lv_obj_align(back_btn.get_container(), LV_ALIGN_BOTTOM_RIGHT, 10, 0);
+  // Z column
+  lv_obj_t *z = make_card(1);
+  lv_obj_set_flex_flow(z, LV_FLEX_FLOW_COLUMN);
+  lv_obj_set_flex_align(z, LV_FLEX_ALIGN_SPACE_EVENLY, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+  round_btn(z_up_btn, z, ICON_ARROW_UP, ButtonContainer::PILL_GLASS);
+  ui::text_label(z, "Z", &manrope_20, ui::text2());
+  round_btn(z_down_btn, z, ICON_ARROW_DOWN, ButtonContainer::PILL_GLASS);
+  lv_obj_move_to_index(z_up_btn.get_container(), 0);
+
+  // actions
+  lv_obj_t *actions = make_card(2);
+  lv_obj_set_flex_flow(actions, LV_FLEX_FLOW_COLUMN);
+  lv_obj_set_flex_align(actions, LV_FLEX_ALIGN_SPACE_EVENLY, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+  lv_obj_set_parent(home_all_btn.get_container(), actions);
+  lv_obj_set_parent(motoroff_btn.get_container(), actions);
+  lv_obj_set_parent(emergency_btn.get_container(), actions);
+  home_all_btn.make_pill(ICON_HOME_AXES, ButtonContainer::PILL_ACCENT);
+  motoroff_btn.make_pill(ICON_MOTOR_OFF, ButtonContainer::PILL_GLASS);
+  emergency_btn.make_pill(ICON_ESTOP, ButtonContainer::PILL_DANGER_FILL);
+  for (auto *b : {&home_all_btn, &motoroff_btn, &emergency_btn}) {
+    lv_obj_set_width(b->get_container(), LV_PCT(100));
+  }
+
+  lv_obj_set_grid_cell(distance_selector.get_container(), LV_GRID_ALIGN_STRETCH, 0, 3, LV_GRID_ALIGN_CENTER, 1, 1);
 
   ws.register_notify_update(this);
 }

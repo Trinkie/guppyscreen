@@ -132,6 +132,8 @@ void ButtonContainer::make_pill(const char *icon, PillVariant variant, bool icon
   lv_obj_set_flex_flow(btn_cont, LV_FLEX_FLOW_ROW);
   lv_obj_set_flex_align(btn_cont, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
   lv_obj_set_height(btn_cont, 56);
+  lv_obj_set_style_text_color(btn_cont, ui::text3(), LV_STATE_DISABLED);
+  lv_obj_set_style_bg_opa(btn_cont, 12, LV_STATE_DISABLED);
 
   if (icon != NULL) {
     pill_icon = lv_label_create(btn_cont);
@@ -147,6 +149,12 @@ void ButtonContainer::make_pill(const char *icon, PillVariant variant, bool icon
     lv_obj_add_flag(label, LV_OBJ_FLAG_HIDDEN);
     lv_obj_set_style_pad_hor(btn_cont, 0, 0);
     lv_obj_set_width(btn_cont, 56);
+  }
+}
+
+void ButtonContainer::set_icon(const char *icon) {
+  if (pill_icon != NULL) {
+    lv_label_set_text(pill_icon, icon);
   }
 }
 
