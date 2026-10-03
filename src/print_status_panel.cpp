@@ -174,6 +174,7 @@ PrintStatusPanel::PrintStatusPanel(KWebSocketClient &websocket_client,
   for (auto *item : inline_items) {
     lv_obj_t *c = item->get_container();
     ui::clear(c);
+    lv_obj_set_style_border_width(c, 0, 0);
     lv_obj_set_size(c, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
     lv_obj_set_flex_flow(c, LV_FLEX_FLOW_ROW);
     lv_obj_set_flex_align(c, LV_FLEX_ALIGN_END, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
