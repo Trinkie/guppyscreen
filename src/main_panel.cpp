@@ -342,6 +342,7 @@ void MainPanel::create_main(lv_obj_t * parent)
 
     lv_obj_t *chart_title = ui::text_label(chart_card, "Temperature", &manrope_16, ui::text2());
     lv_obj_set_style_translate_x(chart_title, -30, 0);
+    lv_obj_move_to_index(chart_title, 0);
 
     lv_obj_set_width(temp_chart, LV_PCT(100));
     lv_obj_set_flex_grow(temp_chart, 1);
